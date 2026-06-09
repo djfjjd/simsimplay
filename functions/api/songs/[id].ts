@@ -10,9 +10,11 @@ import {
 type SongPayload = {
   categoryId?: unknown;
   title?: unknown;
+  prompt?: unknown;
   description?: unknown;
-  moodTags?: unknown;
+  emotionTags?: unknown;
   situationTags?: unknown;
+  timeTags?: unknown;
   energyScore?: unknown;
   audioUrl?: unknown;
   thumbnailUrl?: unknown;
@@ -28,9 +30,11 @@ const songSelect = `
     songs.category_id,
     categories.name AS category_name,
     songs.title,
+    songs.prompt,
     songs.description,
     songs.mood_tags,
     songs.situation_tags,
+    songs.time_tags,
     songs.energy_score,
     songs.audio_url,
     songs.thumbnail_url,
@@ -89,9 +93,11 @@ export const onRequestPut: PagesFunction<Env> = async ({ env, request }) => {
       SET
         category_id = ?,
         title = ?,
+        prompt = ?,
         description = ?,
         mood_tags = ?,
         situation_tags = ?,
+        time_tags = ?,
         energy_score = ?,
         audio_url = ?,
         thumbnail_url = ?,
@@ -106,9 +112,11 @@ export const onRequestPut: PagesFunction<Env> = async ({ env, request }) => {
     .bind(
       categoryId,
       title,
+      textValue(payload?.prompt),
       textValue(payload?.description),
-      JSON.stringify(normalizeTags(payload?.moodTags)),
+      JSON.stringify(normalizeTags(payload?.emotionTags)),
       JSON.stringify(normalizeTags(payload?.situationTags)),
+      JSON.stringify(normalizeTags(payload?.timeTags)),
       clampEnergyScore(payload?.energyScore),
       optionalUrl(payload?.audioUrl),
       textValue(payload?.thumbnailUrl),

@@ -9,9 +9,12 @@ export type Song = {
   categoryId: number | null;
   categoryName: string;
   title: string;
+  prompt: string;
   description: string;
+  emotionTags: string[];
   moodTags: string[];
   situationTags: string[];
+  timeTags: string[];
   energyScore: number;
   audioUrl: string;
   thumbnailUrl: string;

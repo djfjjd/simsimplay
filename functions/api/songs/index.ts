@@ -10,9 +10,11 @@ import {
 type SongPayload = {
   categoryId?: unknown;
   title?: unknown;
+  prompt?: unknown;
   description?: unknown;
-  moodTags?: unknown;
+  emotionTags?: unknown;
   situationTags?: unknown;
+  timeTags?: unknown;
   energyScore?: unknown;
   audioUrl?: unknown;
   thumbnailUrl?: unknown;
@@ -28,9 +30,11 @@ const songSelect = `
     songs.category_id,
     categories.name AS category_name,
     songs.title,
+    songs.prompt,
     songs.description,
     songs.mood_tags,
     songs.situation_tags,
+    songs.time_tags,
     songs.energy_score,
     songs.audio_url,
     songs.thumbnail_url,
@@ -59,6 +63,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const url = new URL(request.url);
   const category = url.searchParams.get("category")?.trim();
   const mood = url.searchParams.get("mood")?.trim();
+  const search = url.searchParams.get("search")?.trim();
+  
   const params: string[] = [];
   const filters: string[] = [];
 
@@ -68,8 +74,13 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   }
 
   if (mood) {
-    filters.push("(songs.mood_tags LIKE ? OR songs.situation_tags LIKE ?)");
-    params.push(`%${mood}%`, `%${mood}%`);
+    filters.push("(songs.mood_tags LIKE ? OR songs.situation_tags LIKE ? OR songs.time_tags LIKE ?)");
+    params.push(`%${mood}%`, `%${mood}%`, `%${mood}%`);
+  }
+
+  if (search) {
+    filters.push("(songs.title LIKE ? OR songs.description LIKE ? OR songs.prompt LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   const where = filters.length ? ` WHERE ${filters.join(" AND ")}` : "";
@@ -97,16 +108,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     if (!category) return jsonError("category not found", 404);
   }
 
-  const moodTags = normalizeTags(payload?.moodTags);
+  const emotionTags = normalizeTags(payload?.emotionTags);
   const situationTags = normalizeTags(payload?.situationTags);
+  const timeTags = normalizeTags(payload?.timeTags);
+  
   const result = await env.DB.prepare(
     `
       INSERT INTO songs (
         category_id,
         title,
+        prompt,
         description,
         mood_tags,
         situation_tags,
+        time_tags,
         energy_score,
         audio_url,
         thumbnail_url,
@@ -115,15 +130,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
         apple_music_url,
         duration
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   )
     .bind(
       categoryId,
       title,
+      textValue(payload?.prompt),
       textValue(payload?.description),
-      JSON.stringify(moodTags),
+      JSON.stringify(emotionTags),
       JSON.stringify(situationTags),
+      JSON.stringify(timeTags),
       clampEnergyScore(payload?.energyScore),
       optionalUrl(payload?.audioUrl),
       textValue(payload?.thumbnailUrl),

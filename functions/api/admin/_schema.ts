@@ -76,9 +76,11 @@ export async function ensureAdminSchema(db: D1Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         category_id INTEGER,
         title TEXT NOT NULL,
+        prompt TEXT NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
         mood_tags TEXT NOT NULL DEFAULT '[]',
         situation_tags TEXT NOT NULL DEFAULT '[]',
+        time_tags TEXT NOT NULL DEFAULT '[]',
         energy_score INTEGER NOT NULL DEFAULT 50,
         audio_url TEXT NOT NULL DEFAULT '#',
         thumbnail_url TEXT NOT NULL DEFAULT '',
@@ -114,6 +116,14 @@ export async function ensureAdminSchema(db: D1Database) {
       )
     `),
   ]);
+
+  // Ensure columns exist (for local dev where ensureAdminSchema runs repeatedly)
+  try {
+    await db.prepare("ALTER TABLE songs ADD COLUMN prompt TEXT NOT NULL DEFAULT ''").run();
+  } catch {}
+  try {
+    await db.prepare("ALTER TABLE songs ADD COLUMN time_tags TEXT NOT NULL DEFAULT '[]'").run();
+  } catch {}
 
   await db.batch(
     defaultCategories.map((name) =>
@@ -151,9 +161,11 @@ export type SongRow = {
   category_id: number | null;
   category_name: string | null;
   title: string;
+  prompt: string;
   description: string;
   mood_tags: string;
   situation_tags: string;
+  time_tags: string;
   energy_score: number;
   audio_url: string;
   thumbnail_url: string;
@@ -217,9 +229,11 @@ export function mapSong(row: SongRow) {
     categoryId: row.category_id,
     categoryName: row.category_name ?? "미분류",
     title: row.title,
+    prompt: row.prompt || "",
     description: row.description,
-    moodTags: parseJsonArray(row.mood_tags),
+    emotionTags: parseJsonArray(row.mood_tags),
     situationTags: parseJsonArray(row.situation_tags),
+    timeTags: parseJsonArray(row.time_tags),
     energyScore: row.energy_score,
     audioUrl: row.audio_url,
     thumbnailUrl: row.thumbnail_url,
