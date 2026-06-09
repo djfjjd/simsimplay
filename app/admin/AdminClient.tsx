@@ -43,6 +43,11 @@ export function AdminClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
+  // File States
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [thumbFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbnailPreview] = useState<string>("");
+
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEmotion, setFilterEmotion] = useState("");
@@ -57,7 +62,7 @@ export function AdminClient() {
   const filteredSongs = useMemo(() => {
     return songs.filter((song) => {
       const matchSearch = song.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          song.prompt.toLowerCase().includes(searchTerm.toLowerCase());
+                          (song.prompt || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchEmotion = !filterEmotion || song.emotionTags?.includes(filterEmotion);
       const matchSituation = !filterSituation || song.situationTags?.includes(filterSituation);
       const matchEnergy = !filterEnergy || 
@@ -81,6 +86,35 @@ export function AdminClient() {
       return { ...current, [type]: nextTags };
     });
   }
+
+  // File Upload Logic (Separated for future R2 integration)
+  async function uploadAudioFile(file: File): Promise<string> {
+    // TODO: Actual R2 implementation here
+    // For now, return a temporary URL or filename
+    return URL.createObjectURL(file);
+  }
+
+  async function uploadThumbnailFile(file: File): Promise<string> {
+    // TODO: Actual R2 implementation here
+    return URL.createObjectURL(file);
+  }
+
+  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+      updateForm("audioUrl", file.name);
+    }
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+      setThumbnailPreview(URL.createObjectURL(file));
+      updateForm("thumbnailUrl", file.name);
+    }
+  };
 
   async function loadData({ showLoading = true } = {}) {
     if (showLoading) setIsLoading(true);
@@ -108,7 +142,8 @@ export function AdminClient() {
   useEffect(() => { loadData(); }, []);
 
   async function handleAiTagging() {
-    if (!form.prompt.trim()) {
+    const prompt = form.prompt.trim();
+    if (!prompt) {
       setMessage("프롬프트를 입력해주세요.");
       return;
     }
@@ -117,20 +152,61 @@ export function AdminClient() {
     setMessage("AI가 태그를 생성하고 있습니다...");
 
     try {
-      // Logic for AI tagging (simulated for now, could use Workers AI)
-      const p = form.prompt.toLowerCase();
-      const result = {
-        description: `마음을 ${p.includes('piano') ? '피아노' : '음악'}으로 채워주는 힐링 트랙`,
-        emotionTags: emotionOptions.filter(tag => p.includes(tag) || (tag === '수면' && p.includes('sleep')) || (tag === '평온' && p.includes('peaceful'))),
-        situationTags: situationOptions.filter(tag => p.includes(tag) || (tag === '잠들기전' && p.includes('sleep')) || (tag === '새벽' && p.includes('night'))),
-        timeTags: timeOptions.filter(tag => (tag === '밤' && p.includes('night')) || (tag === '아침' && p.includes('morning'))),
-        energyScore: p.includes('fast') || p.includes('energetic') ? "80" : "20"
-      };
+      const p = prompt.toLowerCase();
+      
+      // AI Logic Simulation
+      const detectedEmotions = emotionOptions.filter(tag => {
+        if (tag === '수면') return p.includes('sleep') || p.includes('dream');
+        if (tag === '평온') return p.includes('peaceful') || p.includes('calm') || p.includes('gentle');
+        if (tag === '치유') return p.includes('healing') || p.includes('ambient');
+        if (tag === '불안') return p.includes('anxious') || p.includes('tension');
+        if (tag === '우울') return p.includes('sad') || p.includes('emotional');
+        if (tag === '집중') return p.includes('focus') || p.includes('study') || p.includes('minimalist');
+        if (tag === '명상') return p.includes('meditation') || p.includes('zen');
+        if (tag === '회복') return p.includes('recovery') || p.includes('rest');
+        return false;
+      });
+
+      const detectedSituations = situationOptions.filter(tag => {
+        if (tag === '잠들기전') return p.includes('sleep') || p.includes('night');
+        if (tag === '새벽') return p.includes('dawn') || p.includes('night');
+        if (tag === '명상') return p.includes('meditation') || p.includes('breath');
+        if (tag === '공부') return p.includes('study') || p.includes('focus');
+        if (tag === '독서') return p.includes('read') || p.includes('quiet');
+        return false;
+      });
+
+      const detectedTimes = timeOptions.filter(tag => {
+        if (tag === '밤') return p.includes('night') || p.includes('sleep');
+        if (tag === '새벽') return p.includes('dawn') || p.includes('night');
+        if (tag === '아침') return p.includes('morning') || p.includes('wake');
+        return false;
+      });
+
+      let energy = 50;
+      if (p.includes('piano') || p.includes('slow') || p.includes('minimalist')) energy = 15;
+      if (p.includes('energetic') || p.includes('fast') || p.includes('upbeat')) energy = 85;
+
+      // Recommended Category
+      let recommendedCategoryName = "감정회복";
+      if (p.includes('sleep')) recommendedCategoryName = "수면";
+      else if (p.includes('focus') || p.includes('study')) recommendedCategoryName = "집중";
+      else if (p.includes('meditation')) recommendedCategoryName = "명상";
+      else if (p.includes('anxious')) recommendedCategoryName = "불안완화";
+      else if (p.includes('energetic')) recommendedCategoryName = "긍정에너지";
+
+      const matchedCat = categories.find(c => c.name === recommendedCategoryName) || categories[0];
 
       setForm(prev => ({
         ...prev,
-        ...result
+        description: `${detectedSituations[0] || '일상'}에서 마음을 ${detectedEmotions[0] || '편안'}하게 해주는 음악입니다.`,
+        emotionTags: detectedEmotions,
+        situationTags: detectedSituations,
+        timeTags: detectedTimes,
+        energyScore: String(energy),
+        categoryId: matchedCat ? String(matchedCat.id) : prev.categoryId
       }));
+      
       setMessage("AI 태그 생성이 완료되었습니다.");
     } catch {
       setMessage("AI 태그 생성에 실패했습니다.");
@@ -146,8 +222,17 @@ export function AdminClient() {
       return;
     }
 
+    let audioUrl = form.audioUrl;
+    let thumbnailUrl = form.thumbnailUrl;
+
+    // Actual upload logic if files exist
+    if (audioFile) audioUrl = await uploadAudioFile(audioFile);
+    if (thumbFile) thumbnailUrl = await uploadThumbnailFile(thumbFile);
+
     const payload = {
       ...form,
+      audioUrl,
+      thumbnailUrl,
       categoryId: Number(form.categoryId),
       energyScore: Number(form.energyScore)
     };
@@ -164,11 +249,21 @@ export function AdminClient() {
     }
 
     setMessage(form.id ? "수정되었습니다." : "추가되었습니다.");
-    setForm({ ...emptyForm, categoryId: form.categoryId });
+    resetForm();
     loadData({ showLoading: false });
   }
 
-  function handleEditSong(song: any) {
+  function resetForm() {
+    setForm(emptyForm);
+    setAudioFile(null);
+    setThumbnailFile(null);
+    setThumbnailPreview("");
+    if (categories.length > 0) {
+      setForm(prev => ({ ...prev, categoryId: String(categories[0].id) }));
+    }
+  }
+
+  function handleEditSong(song: Song) {
     setForm({
       id: song.id,
       categoryId: String(song.categoryId),
@@ -182,6 +277,7 @@ export function AdminClient() {
       audioUrl: song.audioUrl,
       thumbnailUrl: song.thumbnailUrl,
     });
+    setThumbnailPreview(song.thumbnailUrl.startsWith("blob:") ? "" : song.thumbnailUrl);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -204,7 +300,7 @@ export function AdminClient() {
           </h2>
           {form.id && (
             <button 
-              onClick={() => setForm(emptyForm)}
+              onClick={resetForm}
               className="text-sm text-slate-400 hover:text-white transition underline"
             >
               취소하고 새로 등록하기
@@ -258,24 +354,50 @@ export function AdminClient() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-bold text-slate-400 mb-2">mp3 파일 URL</label>
-              <input
-                value={form.audioUrl}
-                onChange={e => updateForm("audioUrl", e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-violet-500/50 transition"
-              />
+              <label className="block text-sm font-bold text-slate-400 mb-2">mp3 파일 업로드</label>
+              <div className="relative group">
+                <input
+                  type="file"
+                  accept="audio/mpeg,audio/mp3"
+                  onChange={handleAudioChange}
+                  className="hidden"
+                  id="audio-upload"
+                />
+                <label 
+                  htmlFor="audio-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 rounded-2xl border-2 border-dashed border-white/10 bg-black/30 hover:border-violet-500/50 cursor-pointer transition"
+                >
+                  <svg className="w-8 h-8 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                  <span className="text-sm text-slate-400">{audioFile ? audioFile.name : "클릭하여 MP3 파일 선택"}</span>
+                </label>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-400 mb-2">썸네일 이미지 URL</label>
-              <input
-                value={form.thumbnailUrl}
-                onChange={e => updateForm("thumbnailUrl", e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-violet-500/50 transition"
-              />
+              <label className="block text-sm font-bold text-slate-400 mb-2">썸네일 이미지 업로드</label>
+              <div className="relative group flex gap-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
+                  id="thumb-upload"
+                />
+                <label 
+                  htmlFor="thumb-upload"
+                  className="flex-1 flex flex-col items-center justify-center h-32 rounded-2xl border-2 border-dashed border-white/10 bg-black/30 hover:border-violet-500/50 cursor-pointer transition overflow-hidden"
+                >
+                  {thumbPreview ? (
+                    <img src={thumbPreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <svg className="w-8 h-8 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <span className="text-sm text-slate-400">이미지 선택</span>
+                    </>
+                  )}
+                </label>
+              </div>
             </div>
           </div>
 
@@ -301,7 +423,7 @@ export function AdminClient() {
                     onClick={() => toggleTag('emotionTags', tag)}
                     className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
                       form.emotionTags.includes(tag) 
-                      ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30' 
+                      ? 'bg-violet-600 text-white ring-2 ring-violet-400/50 shadow-lg' 
                       : 'bg-white/5 text-slate-400 hover:bg-white/10'
                     }`}
                   >
@@ -320,7 +442,7 @@ export function AdminClient() {
                     onClick={() => toggleTag('situationTags', tag)}
                     className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
                       form.situationTags.includes(tag) 
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-400/50 shadow-lg' 
                       : 'bg-white/5 text-slate-400 hover:bg-white/10'
                     }`}
                   >
@@ -339,7 +461,7 @@ export function AdminClient() {
                     onClick={() => toggleTag('timeTags', tag)}
                     className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
                       form.timeTags.includes(tag) 
-                      ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' 
+                      ? 'bg-pink-600 text-white ring-2 ring-pink-400/50 shadow-lg' 
                       : 'bg-white/5 text-slate-400 hover:bg-white/10'
                     }`}
                   >
@@ -354,7 +476,7 @@ export function AdminClient() {
             <div className="flex-1">
               <label className="flex justify-between text-sm font-bold text-slate-400 mb-2">
                 <span>에너지 점수</span>
-                <span className="text-violet-400">{form.energyScore}</span>
+                <span className="text-violet-400 font-bold">{form.energyScore}</span>
               </label>
               <input
                 type="range"
