@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   analyzeMood,
   diaryStorageKey,
@@ -9,17 +10,22 @@ import {
 } from "../lib/mood";
 import { TodayFortuneMusic } from "../../src/components/TodayFortuneMusic";
 
-export function MoodClient() {
-  const [input, setInput] = useState("");
+function MoodContent() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") || "";
+  
   const [analysis, setAnalysis] = useState<MoodAnalysis | null>(null);
   const [saved, setSaved] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
 
-  const canAnalyze = useMemo(() => input.trim().length > 0, [input]);
+  useEffect(() => {
+    if (query) {
+      handleAnalyze(query);
+    }
+  }, [query]);
 
-  async function handleAnalyze() {
-    if (!canAnalyze) return;
+  async function handleAnalyze(text: string) {
     setIsAnalyzing(true);
     setError("");
     setSaved(false);
@@ -28,7 +34,7 @@ export function MoodClient() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: input.trim() }),
+        body: JSON.stringify({ content: text.trim() }),
       });
 
       if (!response.ok) {
@@ -43,7 +49,7 @@ export function MoodClient() {
         tracks: result.recommendedMusic,
       });
     } catch {
-      setAnalysis(analyzeMood(input));
+      setAnalysis(analyzeMood(text));
       setError("AI 분석 연결이 불안정해 기본 감정정리 결과를 표시했습니다.");
     } finally {
       setIsAnalyzing(false);
@@ -51,11 +57,11 @@ export function MoodClient() {
   }
 
   function handleSave() {
-    if (!analysis || !input.trim()) return;
+    if (!analysis || !query.trim()) return;
 
     const nextEntry: DiaryEntry = {
       id: crypto.randomUUID(),
-      content: input.trim(),
+      content: query.trim(),
       mood: analysis.emotion,
       analysis,
       recommendedMusic: analysis.tracks,
@@ -74,115 +80,142 @@ export function MoodClient() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-      <section className="rounded-3xl border border-white/10 bg-white/[0.07] p-5 sm:p-6">
-        <label htmlFor="mood-input" className="text-lg font-bold text-white">
-          오늘의 기분이나 있었던 일
-        </label>
-        <textarea
-          id="mood-input"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="예: 오늘은 일이 너무 많아서 지치고 막막했어요."
-          className="mt-4 min-h-52 w-full rounded-3xl border border-white/10 bg-black/30 p-4 leading-7 text-white outline-none ring-pink-300/40 transition placeholder:text-slate-500 focus:ring-4"
-        />
-        <button
-          type="button"
-          onClick={handleAnalyze}
-          disabled={!canAnalyze || isAnalyzing}
-          className="mt-4 w-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-pink-500 px-6 py-4 font-bold text-white transition enabled:hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
-        >
-          {isAnalyzing ? "분석 중..." : "분석하기"}
-        </button>
-        <p className="mt-4 text-xs leading-5 text-slate-500">
-          원문은 D1에 저장하지 않으며, 감정일기에 저장하기를 누를 때만 현재
-          브라우저 localStorage에 저장됩니다.
-        </p>
-      </section>
-
-      <div className="space-y-6">
-        <TodayFortuneMusic />
-        <section className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
-          {!analysis ? (
-            <div className="flex min-h-72 items-center justify-center rounded-3xl border border-dashed border-white/15 p-6 text-center text-slate-400">
-              마음을 입력하고 분석하면 결과가 여기에 표시됩니다.
-            </div>
-          ) : (
-            <div>
-              {error ? (
-                <p className="mb-4 rounded-2xl border border-yellow-300/20 bg-yellow-500/10 p-3 text-sm text-yellow-100">
-                  {error}
-                </p>
-              ) : null}
-              <p className="text-sm font-semibold text-pink-200">주요 감정</p>
-              <h2 className="mt-2 text-4xl font-black text-white">{analysis.mood}</h2>
-              <div className="mt-5">
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
+    <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
+      {/* Left Column: Analysis Results */}
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8 backdrop-blur-sm">
+        {isAnalyzing ? (
+          <div className="flex min-h-[400px] flex-col items-center justify-center space-y-4 text-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+            <p className="text-lg font-medium text-slate-300">마음을 분석하고 있습니다...</p>
+          </div>
+        ) : !analysis ? (
+          <div className="flex min-h-[400px] flex-col items-center justify-center space-y-6 text-center">
+            <p className="text-xl text-slate-400">분석할 내용이 없습니다.</p>
+            <a href="/" className="rounded-full bg-white/10 px-8 py-3 font-bold hover:bg-white/20 transition">
+              메인으로 돌아가기
+            </a>
+          </div>
+        ) : (
+          <div className="animate-in fade-in duration-700">
+            {error ? (
+              <p className="mb-6 rounded-2xl border border-yellow-300/20 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                {error}
+              </p>
+            ) : null}
+            
+            <div className="mb-8">
+              <p className="text-sm font-semibold tracking-wider text-violet-400 uppercase">오늘의 주요 감정</p>
+              <h2 className="mt-2 text-5xl font-black text-white">{analysis.mood}</h2>
+              
+              <div className="mt-8">
+                <div className="mb-3 flex justify-between text-sm font-medium text-slate-400">
                   <span>감정 강도</span>
                   <span>{analysis.intensity}/100</span>
                 </div>
-                <div className="h-3 rounded-full bg-white/10">
+                <div className="h-4 rounded-full bg-white/5 overflow-hidden">
                   <div
-                    className="h-3 rounded-full bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400"
+                    className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500 transition-all duration-1000 ease-out"
                     style={{ width: `${analysis.intensity}%` }}
                   />
                 </div>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2">
+
+              <div className="mt-6 flex flex-wrap gap-2">
                 {analysis.topics.map((topic) => (
                   <span
                     key={topic}
-                    className="rounded-full bg-blue-400/10 px-3 py-1 text-xs text-blue-100"
+                    className="rounded-full border border-violet-500/20 bg-violet-500/5 px-4 py-1.5 text-xs font-medium text-violet-300"
                   >
-                    {topic}
+                    #{topic}
                   </span>
                 ))}
               </div>
-              <div className="mt-6 space-y-4">
-                <div className="rounded-2xl bg-white/[0.07] p-4">
-                  <p className="text-sm text-slate-400">공감 메시지</p>
-                  <p className="mt-2 leading-7 text-white">{analysis.message}</p>
-                </div>
-                <div className="rounded-2xl bg-white/[0.07] p-4">
-                  <p className="text-sm text-slate-400">오늘의 추천 행동</p>
-                  <p className="mt-2 leading-7 text-white">{analysis.action}</p>
-                </div>
-                <div className="rounded-2xl bg-white/[0.07] p-4">
-                  <p className="text-sm text-slate-400">추천 음악 카테고리</p>
-                  <p className="mt-2 font-semibold text-white">
-                    {analysis.musicCategory} · {analysis.playlist}
-                  </p>
-                </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">공감 메시지</p>
+                <p className="mt-3 leading-relaxed text-slate-200">{analysis.message}</p>
               </div>
-              <div className="mt-6">
-                <p className="mb-3 font-bold text-white">추천 힐링음악</p>
-                <div className="space-y-3">
-                  {analysis.recommendedMusic.map((track) => (
-                    <a
-                      key={track.title}
-                      href={track.musicUrl}
-                      className="block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/[0.1]"
-                    >
-                      <p className="font-semibold text-white">{track.title}</p>
-                      <p className="mt-1 text-sm text-slate-400">{track.description}</p>
-                    </a>
-                  ))}
-                </div>
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">오늘의 추천 행동</p>
+                <p className="mt-3 leading-relaxed text-slate-200">{analysis.action}</p>
               </div>
-              <p className="mt-5 rounded-2xl border border-pink-300/20 bg-pink-500/10 p-4 text-sm leading-6 text-pink-50">
-                {analysis.notice}
+            </div>
+
+            <div className="mt-10">
+              <p className="mb-5 text-lg font-bold text-white flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />
+                추천 힐링음악
               </p>
+              <div className="grid gap-3">
+                {analysis.recommendedMusic.map((track) => (
+                  <a
+                    key={track.title}
+                    href={track.musicUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-5 transition hover:bg-white/10 hover:border-white/10"
+                  >
+                    <div>
+                      <p className="font-bold text-white group-hover:text-pink-300 transition">{track.title}</p>
+                      <p className="mt-1 text-sm text-slate-400">{track.description}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-pink-500/20 transition">
+                      <svg className="w-5 h-5 text-slate-300 group-hover:text-pink-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-10 pt-8 border-t border-white/5">
               <button
                 type="button"
                 onClick={handleSave}
-                className="mt-6 w-full rounded-full border border-pink-300/40 bg-pink-500/15 px-5 py-4 font-bold text-pink-50 transition hover:bg-pink-500/25"
+                disabled={saved}
+                className={`w-full rounded-2xl py-5 font-bold transition-all ${
+                  saved 
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default" 
+                  : "bg-white/5 text-white border border-white/10 hover:bg-white/10 active:scale-[0.98]"
+                }`}
               >
-                {saved ? "감정일기에 저장됨" : "감정일기에 저장하기"}
+                {saved ? "✓ 감정일기에 저장되었습니다" : "오늘의 분석 결과 저장하기"}
               </button>
+              <p className="mt-4 text-center text-xs text-slate-500">
+                입력하신 내용은 브라우저의 localStorage에만 안전하게 저장됩니다.
+              </p>
             </div>
-          )}
-        </section>
-      </div>
+          </div>
+        )}
+      </section>
+
+      {/* Right Column: Today's Fortune */}
+      <aside className="space-y-6">
+        <div className="sticky top-24">
+          <TodayFortuneMusic />
+          <div className="mt-6 rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/5 to-pink-500/5 p-6">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Guide</h3>
+            <p className="mt-4 text-sm leading-relaxed text-slate-400">
+              분석 결과가 마음에 드셨나요? 저장된 일기는 상단 '일기' 메뉴에서 언제든 다시 확인할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      </aside>
     </div>
+  );
+}
+
+export function MoodClient() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+      </div>
+    }>
+      <MoodContent />
+    </Suspense>
   );
 }

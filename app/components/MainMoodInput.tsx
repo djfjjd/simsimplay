@@ -11,11 +11,9 @@ export function MainMoodInput() {
     e.preventDefault();
     if (!input.trim()) return;
     
-    // Redirect to mood page with the input as a query param (or similar logic)
-    // For now, let's just go to /mood. 
-    // In a real app, we might pass the state or use a global store.
-    // Given the current structure, let's just redirect to the mood page.
-    router.push(`/mood`);
+    // Pass the input as a URL-encoded query parameter to the mood page
+    const encodedInput = encodeURIComponent(input.trim());
+    router.push(`/mood?q=${encodedInput}`);
   };
 
   return (
