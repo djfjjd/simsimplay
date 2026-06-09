@@ -34,9 +34,9 @@ export function FortuneClient() {
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-4xl">
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-sm">
-        <form onSubmit={handleAnalyze} className="grid gap-6 sm:grid-cols-[1.5fr_1fr_auto]">
+        <form onSubmit={handleAnalyze} className="grid gap-6 sm:grid-cols-[1.5fr_1fr_auto] text-left">
           <div>
             <label className="block text-sm font-bold text-slate-400 mb-2">
               생년월일 8자리 (형식: 19000101)
@@ -80,9 +80,9 @@ export function FortuneClient() {
 
       {result && (
         <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="grid gap-6 md:grid-cols-[auto_1fr]">
+          <div className="grid gap-6 md:grid-cols-[auto_1fr] text-left">
             {/* Pillars */}
-            <div className="flex gap-3 h-fit">
+            <div className="flex gap-3 h-fit justify-center md:justify-start">
               {[
                 { label: "시주", val: result.hour },
                 { label: "일주", val: result.day },
