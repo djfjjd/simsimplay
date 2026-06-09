@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MainMoodInput } from "./components/MainMoodInput";
 
 const features = [
   {
@@ -31,23 +32,10 @@ export default function Home() {
             </span>
           </h1>
           <p className="mt-8 text-lg text-slate-300 sm:text-xl">
-            SimSimPlay는 AI 기술을 통해 당신의 마음을 읽고,<br className="hidden sm:block" />
-            현재 상태에 가장 어울리는 힐링 음악을 선물합니다.
+            오늘 당신의 마음은 어떤가요? 한 문장으로 들려주세요.
           </p>
-          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <Link
-              href="/mood"
-              className="rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-8 py-4 font-bold shadow-lg transition hover:scale-105"
-            >
-              지금 바로 시작하기
-            </Link>
-            <Link
-              href="/music"
-              className="rounded-full border border-white/20 bg-white/5 px-8 py-4 font-bold transition hover:bg-white/10"
-            >
-              음악 둘러보기
-            </Link>
-          </div>
+          
+          <MainMoodInput />
         </div>
       </section>
 
@@ -66,26 +54,6 @@ export default function Home() {
                 </p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Hero Image Section - Simplified */}
-      <section className="px-6 pb-24">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
-          <div className="relative aspect-[21/9] w-full">
-            <Image
-              src="/simsimplay-hero.png"
-              alt="SimSimPlay Healing Experience"
-              fill
-              className="object-cover"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-8 left-8 right-8 text-center sm:text-left">
-              <p className="text-sm font-medium text-blue-300">New Release</p>
-              <h2 className="mt-1 text-2xl font-bold">공간을 채우는 마음의 평온</h2>
-            </div>
           </div>
         </div>
       </section>
