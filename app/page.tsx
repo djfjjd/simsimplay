@@ -9,9 +9,9 @@ export default function Home() {
         
         <div className="relative mx-auto max-w-5xl text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-            감정을 기록하고,<br />
+            오늘 있었던 일을 기록하고,<br />
             <span className="bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">
-              음악으로 치유하세요
+              나만의 플레이리스트를 만나보세요.
             </span>
           </h1>
           <p className="mt-8 text-lg text-slate-300 sm:text-xl">
