@@ -9,7 +9,19 @@ export function FortuneClient() {
   const [result, setResult] = useState<SajuResult | null>(null);
 
   const hours = [
-    "모름", "자", "축", "인", "묘", "진", "사", "오", "미", "신", "유", "술", "해"
+    { val: "모름", label: "모름 (시간 선택 안함)" },
+    { val: "자", label: "자시 (23:00 ~ 01:00)" },
+    { val: "축", label: "축시 (01:00 ~ 03:00)" },
+    { val: "인", label: "인시 (03:00 ~ 05:00)" },
+    { val: "묘", label: "묘시 (05:00 ~ 07:00)" },
+    { val: "진", label: "진시 (07:00 ~ 09:00)" },
+    { val: "사", label: "사시 (09:00 ~ 11:00)" },
+    { val: "오", label: "오시 (11:00 ~ 13:00)" },
+    { val: "미", label: "미시 (13:00 ~ 15:00)" },
+    { val: "신", label: "신시 (15:00 ~ 17:00)" },
+    { val: "유", label: "유시 (17:00 ~ 19:00)" },
+    { val: "술", label: "술시 (19:00 ~ 21:00)" },
+    { val: "해", label: "해시 (21:00 ~ 23:00)" },
   ];
 
   const handleAnalyze = (e: React.FormEvent) => {
@@ -48,8 +60,8 @@ export function FortuneClient() {
               className="w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white focus:ring-4 focus:ring-violet-500/20 outline-none transition appearance-none"
             >
               {hours.map((h) => (
-                <option key={h} value={h} className="bg-[#1a1b26]">
-                  {h === "모름" ? "모름 (시간 선택 안함)" : `${h}시`}
+                <option key={h.val} value={h.val} className="bg-[#1a1b26]">
+                  {h.label}
                 </option>
               ))}
             </select>
