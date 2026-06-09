@@ -14,22 +14,30 @@ export function FortuneClient() {
 
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!birthDate) return;
-    setResult(calculateSaju(birthDate, birthHour));
+    if (!birthDate || birthDate.length !== 8) return;
+    
+    // Convert YYYYMMDD to YYYY-MM-DD for calculateSaju
+    const formattedDate = `${birthDate.slice(0, 4)}-${birthDate.slice(4, 6)}-${birthDate.slice(6, 8)}`;
+    setResult(calculateSaju(formattedDate, birthHour));
   };
 
   return (
     <div className="max-w-4xl">
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-sm">
-        <form onSubmit={handleAnalyze} className="grid gap-6 sm:grid-cols-[1fr_1fr_auto]">
+        <form onSubmit={handleAnalyze} className="grid gap-6 sm:grid-cols-[1.5fr_1fr_auto]">
           <div>
-            <label className="block text-sm font-bold text-slate-400 mb-2">생년월일 (필수)</label>
+            <label className="block text-sm font-bold text-slate-400 mb-2">
+              생년월일 8자리 (형식: 19000101)
+            </label>
             <input
-              type="date"
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
               required
               value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white focus:ring-4 focus:ring-violet-500/20 outline-none transition"
+              onChange={(e) => setBirthDate(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="19000101"
+              className="w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white focus:ring-4 focus:ring-violet-500/20 outline-none transition placeholder:text-slate-600"
             />
           </div>
           <div>
@@ -49,7 +57,7 @@ export function FortuneClient() {
           <div className="flex items-end">
             <button
               type="submit"
-              disabled={!birthDate}
+              disabled={birthDate.length !== 8}
               className="w-full sm:w-auto rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-8 py-4 font-bold text-white shadow-lg transition hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               사주 분석하기
