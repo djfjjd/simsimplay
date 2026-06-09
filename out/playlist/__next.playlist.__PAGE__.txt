@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[75529,["/_next/static/chunks/3rdqn8rx95pw7.js","/_next/static/chunks/14mrh2-p_w84d.js","/_next/static/chunks/1qtn2zhk4ljf4.js"],"PlaylistClient"]
+3:I[97367,["/_next/static/chunks/3rdqn8rx95pw7.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","main",null,{"className":"min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(236,72,153,0.2),transparent_30%),#080914] px-5 py-10 sm:px-8","children":["$","div",null,{"className":"mx-auto max-w-7xl","children":[["$","div",null,{"className":"mb-8 max-w-3xl","children":[["$","p",null,{"className":"mb-3 text-sm font-semibold text-pink-200","children":"Playlists"}],["$","h1",null,{"className":"text-3xl font-bold tracking-tight text-white sm:text-5xl","children":"감정별 플레이리스트 추천"}],["$","p",null,{"className":"mt-4 text-base leading-7 text-slate-300 sm:text-lg","children":"상황과 감정에 맞춰 바로 고를 수 있는 SimSimPlay 플레이리스트입니다."}]]}],["$","$L2",null,{}]]}]}],[["$","script","script-0",{"src":"/_next/static/chunks/1qtn2zhk4ljf4.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"UMBsfbUJkELFZtbx1fedE"}
+5:null
