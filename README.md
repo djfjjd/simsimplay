@@ -53,8 +53,7 @@ Admin:
 - `/admin`에서 카테고리 생성, YouTube/Spotify 음악 링크 추가, 음악 삭제를 할 수 있습니다.
 - 관리자 데이터는 Cloudflare D1 `DB` 바인딩에 저장됩니다.
 - 기본 음악 카테고리는 `수면`, `집중`, `명상`, `행운`, `우울`, `불안`입니다.
-- 관리자 아이디는 `admin`입니다.
-- 관리자 비밀번호는 `ADMIN_PASSWORD` 환경변수로 설정합니다. 로컬에서는 `.env.local`에 보관하고, Cloudflare Pages 배포 환경에도 같은 이름의 환경변수를 설정하세요.
+- `/admin` 보호는 Cloudflare Access에서 이메일 인증 정책으로 처리합니다.
 
 Deploy:
 

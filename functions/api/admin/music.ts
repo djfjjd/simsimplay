@@ -1,5 +1,4 @@
 import { ensureAdminSchema, jsonError } from "./_schema";
-import { requireAdmin } from "../auth/_session";
 
 type MusicRow = {
   id: number;
@@ -26,10 +25,7 @@ function fallbackTitle(sourceType: "youtube" | "spotify", categoryName: string) 
   return `${categoryName} ${sourceType === "spotify" ? "Spotify" : "YouTube"} 음악`;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
-  const unauthorized = await requireAdmin(request, env);
-  if (unauthorized) return unauthorized;
-
+export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   await ensureAdminSchema(env.DB);
 
   const { results } = await env.DB.prepare(
@@ -52,9 +48,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
-  const unauthorized = await requireAdmin(request, env);
-  if (unauthorized) return unauthorized;
-
   await ensureAdminSchema(env.DB);
 
   const payload = await request
@@ -108,9 +101,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) => {
-  const unauthorized = await requireAdmin(request, env);
-  if (unauthorized) return unauthorized;
-
   await ensureAdminSchema(env.DB);
 
   const payload = await request.json<{ id?: unknown }>().catch(() => null);
