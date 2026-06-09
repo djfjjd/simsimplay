@@ -26,9 +26,11 @@ export function MoodClient() {
 
     const nextEntry: DiaryEntry = {
       id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      input: input.trim(),
+      content: input.trim(),
+      mood: analysis.emotion,
       analysis,
+      recommendedMusic: analysis.tracks,
+      createdAt: new Date().toISOString(),
     };
 
     const previous = JSON.parse(

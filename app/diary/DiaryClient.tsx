@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { diaryStorageKey, type DiaryEntry } from "../lib/mood";
+import {
+  diaryStorageKey,
+  legacyDiaryStorageKey,
+  type DiaryEntry,
+  type MoodAnalysis,
+} from "../lib/mood";
+import type { MusicTrack } from "../lib/music";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -10,10 +16,81 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+type LegacyDiaryEntry = {
+  id?: string;
+  createdAt?: string;
+  input?: string;
+  analysis?: MoodAnalysis;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readJsonArray(key: string) {
+  try {
+    const value = localStorage.getItem(key);
+    if (!value) return [];
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeEntry(value: unknown): DiaryEntry | null {
+  if (!isRecord(value)) return null;
+
+  const legacy = value as LegacyDiaryEntry;
+  const analysis = legacy.analysis;
+
+  if (!analysis) return null;
+
+  const content =
+    typeof value.content === "string"
+      ? value.content
+      : typeof legacy.input === "string"
+        ? legacy.input
+        : "";
+  const recommendedMusic = Array.isArray(value.recommendedMusic)
+    ? (value.recommendedMusic as MusicTrack[])
+    : analysis.tracks;
+
+  if (!content) return null;
+
+  return {
+    id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
+    content,
+    mood: analysis.emotion,
+    analysis,
+    recommendedMusic,
+    createdAt:
+      typeof value.createdAt === "string" ? value.createdAt : new Date().toISOString(),
+  };
+}
+
+function loadLocalDiaryEntries() {
+  const current = readJsonArray(diaryStorageKey)
+    .map(normalizeEntry)
+    .filter((entry): entry is DiaryEntry => Boolean(entry));
+
+  if (current.length > 0) return current;
+
+  const legacy = readJsonArray(legacyDiaryStorageKey)
+    .map(normalizeEntry)
+    .filter((entry): entry is DiaryEntry => Boolean(entry));
+
+  if (legacy.length > 0) {
+    localStorage.setItem(diaryStorageKey, JSON.stringify(legacy));
+  }
+
+  return legacy;
+}
+
 export function DiaryClient() {
   const [entries, setEntries] = useState<DiaryEntry[]>(() => {
     if (typeof window === "undefined") return [];
-    return JSON.parse(localStorage.getItem(diaryStorageKey) ?? "[]");
+    return loadLocalDiaryEntries();
   });
 
   function persist(nextEntries: DiaryEntry[]) {
@@ -31,8 +108,12 @@ export function DiaryClient() {
 
   if (entries.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.05] p-10 text-center text-slate-300">
-        아직 저장된 감정일기가 없습니다
+      <div className="space-y-4 rounded-3xl border border-dashed border-white/15 bg-white/[0.05] p-10 text-center text-slate-300">
+        <p>아직 저장된 감정일기가 없습니다</p>
+        <p className="text-sm leading-6 text-slate-500">
+          감정일기는 서버나 D1에 저장되지 않고 현재 브라우저의 localStorage에만
+          보관됩니다.
+        </p>
       </div>
     );
   }
@@ -70,12 +151,12 @@ export function DiaryClient() {
               </button>
             </div>
             <p className="mt-4 line-clamp-2 leading-7 text-slate-300">
-              {entry.input}
+              {entry.content}
             </p>
             <div className="mt-4 rounded-2xl bg-black/25 p-4">
               <p className="text-sm text-slate-400">추천 음악</p>
               <p className="mt-1 font-semibold text-white">
-                {entry.analysis.tracks.map((track) => track.title).join(", ")}
+                {entry.recommendedMusic.map((track) => track.title).join(", ")}
               </p>
             </div>
           </article>

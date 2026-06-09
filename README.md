@@ -55,6 +55,13 @@ Admin:
 - 기본 음악 카테고리는 `수면`, `집중`, `명상`, `행운`, `우울`, `불안`입니다.
 - `/admin` 보호는 Cloudflare Access에서 이메일 인증 정책으로 처리합니다.
 
+Diary privacy:
+
+- 감정일기와 사용자가 입력한 문장은 D1이나 서버 API에 저장하지 않습니다.
+- `/diary`는 현재 브라우저의 `localStorage` key `simsimplay_diary_entries`만 읽습니다.
+- 저장 구조는 `{ id, content, mood, analysis, recommendedMusic, createdAt }`입니다.
+- 관리자 페이지에서는 사용자 감정일기 원문을 조회하지 않습니다.
+
 Deploy:
 
 ```bash

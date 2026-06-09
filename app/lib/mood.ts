@@ -12,9 +12,11 @@ export type MoodAnalysis = {
 
 export type DiaryEntry = {
   id: string;
-  createdAt: string;
-  input: string;
+  content: string;
+  mood: EmotionType;
   analysis: MoodAnalysis;
+  recommendedMusic: MusicTrack[];
+  createdAt: string;
 };
 
 const emotionRules: Record<
@@ -97,4 +99,5 @@ export function analyzeMood(input: string): MoodAnalysis {
   };
 }
 
-export const diaryStorageKey = "simsimplay.diary.entries";
+export const diaryStorageKey = "simsimplay_diary_entries";
+export const legacyDiaryStorageKey = "simsimplay.diary.entries";
