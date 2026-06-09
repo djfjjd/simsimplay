@@ -35,8 +35,11 @@ This project is configured for Cloudflare Pages with the framework preset set to
 Cloudflare Pages settings:
 
 - Framework preset: `None`
-- Build command: `npm run pages:build`
+- Build command: leave blank, or set to `npm run pages:build`
 - Build output directory: `out`
+
+The `out/` directory is committed so the current Cloudflare Pages project can
+deploy even when the build command is blank.
 
 Local Pages + D1 development:
 
