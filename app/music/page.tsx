@@ -1,5 +1,6 @@
 import { PageShell } from "../components/PageShell";
 import { musicCategories, recommendedTracks } from "../lib/music";
+import { D1MusicClient } from "./D1MusicClient";
 
 export default function MusicPage() {
   return (
@@ -56,6 +57,7 @@ export default function MusicPage() {
           </article>
         ))}
       </div>
+      <D1MusicClient />
     </PageShell>
   );
 }

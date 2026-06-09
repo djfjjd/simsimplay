@@ -48,6 +48,12 @@ npm run d1:migrate:local
 npm run pages:dev
 ```
 
+Admin:
+
+- `/admin`에서 카테고리 생성, YouTube/Spotify 음악 링크 추가, 음악 삭제를 할 수 있습니다.
+- 관리자 데이터는 Cloudflare D1 `DB` 바인딩에 저장됩니다.
+- 기본 음악 카테고리는 `수면`, `집중`, `명상`, `행운`, `우울`, `불안`입니다.
+
 Deploy:
 
 ```bash
