@@ -32,7 +32,6 @@ function formatDate(year: number, month: number, day: number) {
 }
 
 function getGanjiIndex(stem: number, branch: number) {
-  // Find i such that i % 10 = stem and i % 12 = branch
   for (let i = 0; i < 60; i++) {
     if (i % 10 === stem && i % 12 === branch) return i;
   }
@@ -51,21 +50,17 @@ function daysBetweenUtc(a: Date, b: Date) {
 export function getTodayGanji(date = new Date()): GanjiInfo {
   const { year, month, day } = getKoreanDateParts(date);
   
-  // 1. Year Ganji: Byeong-o (2026) -> Stem 2 (Byeong), Branch 6 (O)
   const yearStem = (year - 4 + 10) % 10;
   const yearBranch = (year - 4 + 12) % 12;
   const yearGanjiIndex = getGanjiIndex(yearStem, yearBranch);
   const yearGanji = getGanjiByIndex(yearGanjiIndex);
 
-  // 2. Month Ganji: Based on Year Stem and Month
-  // Standard rule (Simplified: Month changes on 1st of Gregorian month for this app)
-  const monthStemBase = (yearStem * 2 + 2) % 10; // Stem of the 1st month (Feb)
+  const monthStemBase = (yearStem * 2 + 2) % 10;
   const monthStem = (monthStemBase + (month - 2 + 12) % 12) % 10;
-  const monthBranch = (2 + (month - 2 + 12) % 12) % 12; // Feb is In (2)
+  const monthBranch = (2 + (month - 2 + 12) % 12) % 12;
   const monthGanjiIndex = getGanjiIndex(monthStem, monthBranch);
   const monthGanji = getGanjiByIndex(monthGanjiIndex);
 
-  // 3. Day Ganji: Base 2024.01.01 was Gap-ja (0)
   const current = new Date(Date.UTC(year, month - 1, day));
   const base = new Date(Date.UTC(2024, 0, 1));
   const diffDays = daysBetweenUtc(current, base);
@@ -84,6 +79,17 @@ export function getTodayGanji(date = new Date()): GanjiInfo {
     dayBranch,
     line: `${yearGanji}년 ${monthGanji}월 ${dayGanji}일`,
   };
+}
+
+export function getFiveElements(stem: string): string {
+  const elementMap: Record<string, string> = {
+    갑: "목(木)", 을: "목(木)",
+    병: "화(火)", 정: "화(火)",
+    무: "토(土)", 기: "토(土)",
+    경: "금(金)", 신: "금(金)",
+    임: "수(水)", 계: "수(水)",
+  };
+  return elementMap[stem] || "목(木)";
 }
 
 export function getFortuneKeywordByGanji(info: GanjiInfo) {
@@ -155,6 +161,7 @@ export function getMusicRecommendationByGanji(info: GanjiInfo): MusicTrack[] {
 }
 
 export function getFortuneSummary(info: GanjiInfo) {
+  const element = getFiveElements(info.dayStem);
   const keywords = getFortuneKeywordByGanji(info);
-  return `오늘은 ${info.dayGanji}일입니다. ${keywords.slice(0, 2).join("과 ")}의 흐름을 참고해, 마음을 가볍게 정리하는 음악을 추천합니다.`;
+  return `${element} 기운이 강한 날이오니, ${keywords.slice(0, 2).join("과 ")}의 흐름을 참고해 마음을 가볍게 정리하는 음악을 추천합니다.`;
 }
