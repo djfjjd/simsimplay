@@ -1,0 +1,11 @@
+name = "simsimplay"
+compatibility_date = "2026-06-09"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "out"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "simsimplay-db"
+database_id = "a3b2911b-b20a-4d24-a27f-3de0e9130f5a"
+preview_database_id = "DB"
+
