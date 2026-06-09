@@ -4,13 +4,35 @@ export type AdminCategory = {
   created_at: string;
 };
 
-export type AdminMusicTrack = {
+export type Song = {
   id: number;
-  category_id: number;
-  category_name: string;
+  categoryId: number | null;
+  categoryName: string;
   title: string;
-  source_type: "youtube" | "spotify";
-  source_url: string;
-  created_at: string;
+  description: string;
+  moodTags: string[];
+  situationTags: string[];
+  energyScore: number;
+  audioUrl: string;
+  thumbnailUrl: string;
+  youtubeUrl: string;
+  spotifyUrl: string;
+  appleMusicUrl: string;
+  duration: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
+export type AdminMusicTrack = Song;
+
+export type Playlist = {
+  id: number;
+  title: string;
+  description: string;
+  situation: string;
+  moodTag: string;
+  songCount: number;
+  totalDuration: string;
+  createdAt: string;
+  updatedAt: string;
+};

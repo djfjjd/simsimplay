@@ -7,18 +7,47 @@ import {
   type DiaryEntry,
   type MoodAnalysis,
 } from "../lib/mood";
+import { TodayFortuneMusic } from "../../src/components/TodayFortuneMusic";
 
 export function MoodClient() {
   const [input, setInput] = useState("");
   const [analysis, setAnalysis] = useState<MoodAnalysis | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState("");
 
   const canAnalyze = useMemo(() => input.trim().length > 0, [input]);
 
-  function handleAnalyze() {
+  async function handleAnalyze() {
     if (!canAnalyze) return;
-    setAnalysis(analyzeMood(input));
+    setIsAnalyzing(true);
+    setError("");
     setSaved(false);
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: input.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("analysis failed");
+      }
+
+      const result = (await response.json()) as MoodAnalysis;
+      setAnalysis({
+        ...result,
+        emotion: result.mood,
+        comfort: result.message,
+        tracks: result.recommendedMusic,
+      });
+    } catch {
+      setAnalysis(analyzeMood(input));
+      setError("AI 분석 연결이 불안정해 기본 감정정리 결과를 표시했습니다.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
 
   function handleSave() {
@@ -45,7 +74,7 @@ export function MoodClient() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+    <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
       <section className="rounded-3xl border border-white/10 bg-white/[0.07] p-5 sm:p-6">
         <label htmlFor="mood-input" className="text-lg font-bold text-white">
           오늘의 기분이나 있었던 일
@@ -60,71 +89,100 @@ export function MoodClient() {
         <button
           type="button"
           onClick={handleAnalyze}
-          disabled={!canAnalyze}
+          disabled={!canAnalyze || isAnalyzing}
           className="mt-4 w-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-pink-500 px-6 py-4 font-bold text-white transition enabled:hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
         >
-          분석하기
+          {isAnalyzing ? "분석 중..." : "분석하기"}
         </button>
+        <p className="mt-4 text-xs leading-5 text-slate-500">
+          원문은 D1에 저장하지 않으며, 감정일기에 저장하기를 누를 때만 현재
+          브라우저 localStorage에 저장됩니다.
+        </p>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
-        {!analysis ? (
-          <div className="flex min-h-72 items-center justify-center rounded-3xl border border-dashed border-white/15 p-6 text-center text-slate-400">
-            마음을 입력하고 분석하면 결과가 여기에 표시됩니다.
-          </div>
-        ) : (
-          <div>
-            <p className="text-sm font-semibold text-pink-200">감정 유형</p>
-            <h2 className="mt-2 text-4xl font-black text-white">
-              {analysis.emotion}
-            </h2>
-            <div className="mt-5">
-              <div className="mb-2 flex justify-between text-sm text-slate-300">
-                <span>감정 강도</span>
-                <span>{analysis.intensity}/100</span>
-              </div>
-              <div className="h-3 rounded-full bg-white/10">
-                <div
-                  className="h-3 rounded-full bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400"
-                  style={{ width: `${analysis.intensity}%` }}
-                />
-              </div>
+      <div className="space-y-6">
+        <TodayFortuneMusic />
+        <section className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
+          {!analysis ? (
+            <div className="flex min-h-72 items-center justify-center rounded-3xl border border-dashed border-white/15 p-6 text-center text-slate-400">
+              마음을 입력하고 분석하면 결과가 여기에 표시됩니다.
             </div>
-            <div className="mt-6 space-y-4">
-              <div className="rounded-2xl bg-white/[0.07] p-4">
-                <p className="text-sm text-slate-400">짧은 위로</p>
-                <p className="mt-2 leading-7 text-white">{analysis.comfort}</p>
+          ) : (
+            <div>
+              {error ? (
+                <p className="mb-4 rounded-2xl border border-yellow-300/20 bg-yellow-500/10 p-3 text-sm text-yellow-100">
+                  {error}
+                </p>
+              ) : null}
+              <p className="text-sm font-semibold text-pink-200">주요 감정</p>
+              <h2 className="mt-2 text-4xl font-black text-white">{analysis.mood}</h2>
+              <div className="mt-5">
+                <div className="mb-2 flex justify-between text-sm text-slate-300">
+                  <span>감정 강도</span>
+                  <span>{analysis.intensity}/100</span>
+                </div>
+                <div className="h-3 rounded-full bg-white/10">
+                  <div
+                    className="h-3 rounded-full bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400"
+                    style={{ width: `${analysis.intensity}%` }}
+                  />
+                </div>
               </div>
-              <div className="rounded-2xl bg-white/[0.07] p-4">
-                <p className="text-sm text-slate-400">오늘의 추천 행동</p>
-                <p className="mt-2 leading-7 text-white">{analysis.action}</p>
-              </div>
-            </div>
-            <div className="mt-6">
-              <p className="mb-3 font-bold text-white">추천 힐링음악</p>
-              <div className="space-y-3">
-                {analysis.tracks.map((track) => (
-                  <a
-                    key={track.title}
-                    href={track.musicUrl}
-                    className="block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/[0.1]"
+              <div className="mt-5 flex flex-wrap gap-2">
+                {analysis.topics.map((topic) => (
+                  <span
+                    key={topic}
+                    className="rounded-full bg-blue-400/10 px-3 py-1 text-xs text-blue-100"
                   >
-                    <p className="font-semibold text-white">{track.title}</p>
-                    <p className="mt-1 text-sm text-slate-400">{track.description}</p>
-                  </a>
+                    {topic}
+                  </span>
                 ))}
               </div>
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl bg-white/[0.07] p-4">
+                  <p className="text-sm text-slate-400">공감 메시지</p>
+                  <p className="mt-2 leading-7 text-white">{analysis.message}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.07] p-4">
+                  <p className="text-sm text-slate-400">오늘의 추천 행동</p>
+                  <p className="mt-2 leading-7 text-white">{analysis.action}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.07] p-4">
+                  <p className="text-sm text-slate-400">추천 음악 카테고리</p>
+                  <p className="mt-2 font-semibold text-white">
+                    {analysis.musicCategory} · {analysis.playlist}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <p className="mb-3 font-bold text-white">추천 힐링음악</p>
+                <div className="space-y-3">
+                  {analysis.recommendedMusic.map((track) => (
+                    <a
+                      key={track.title}
+                      href={track.musicUrl}
+                      className="block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/[0.1]"
+                    >
+                      <p className="font-semibold text-white">{track.title}</p>
+                      <p className="mt-1 text-sm text-slate-400">{track.description}</p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-5 rounded-2xl border border-pink-300/20 bg-pink-500/10 p-4 text-sm leading-6 text-pink-50">
+                {analysis.notice}
+              </p>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="mt-6 w-full rounded-full border border-pink-300/40 bg-pink-500/15 px-5 py-4 font-bold text-pink-50 transition hover:bg-pink-500/25"
+              >
+                {saved ? "감정일기에 저장됨" : "감정일기에 저장하기"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="mt-6 w-full rounded-full border border-pink-300/40 bg-pink-500/15 px-5 py-4 font-bold text-pink-50 transition hover:bg-pink-500/25"
-            >
-              {saved ? "감정일기에 저장됨" : "감정일기에 저장하기"}
-            </button>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

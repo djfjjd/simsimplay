@@ -1,34 +1,32 @@
-import { ensureAdminSchema } from "./admin/_schema";
+import { ensureAdminSchema, mapSong, type SongRow } from "./admin/_schema";
 
-type MusicRow = {
-  id: number;
-  category_id: number;
-  category_name: string;
-  title: string;
-  source_type: "youtube" | "spotify";
-  source_url: string;
-  created_at: string;
-};
+const songSelect = `
+  SELECT
+    songs.id,
+    songs.category_id,
+    categories.name AS category_name,
+    songs.title,
+    songs.description,
+    songs.mood_tags,
+    songs.situation_tags,
+    songs.energy_score,
+    songs.audio_url,
+    songs.thumbnail_url,
+    songs.youtube_url,
+    songs.spotify_url,
+    songs.apple_music_url,
+    songs.duration,
+    songs.created_at,
+    songs.updated_at
+  FROM songs
+  LEFT JOIN categories ON categories.id = songs.category_id
+`;
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   await ensureAdminSchema(env.DB);
 
-  const { results } = await env.DB.prepare(
-    `
-      SELECT
-        music_tracks.id,
-        music_tracks.category_id,
-        music_categories.name AS category_name,
-        music_tracks.title,
-        music_tracks.source_type,
-        music_tracks.source_url,
-        music_tracks.created_at
-      FROM music_tracks
-      JOIN music_categories ON music_categories.id = music_tracks.category_id
-      ORDER BY music_tracks.id DESC
-    `,
-  ).all<MusicRow>();
+  const { results } = await env.DB.prepare(`${songSelect} ORDER BY songs.id DESC`).all<SongRow>();
+  const songs = results.map(mapSong);
 
-  return Response.json({ tracks: results });
+  return Response.json({ songs, tracks: songs });
 };
-

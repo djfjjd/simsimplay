@@ -3,17 +3,24 @@ import { recommendedTracks, type MusicTrack } from "./music";
 export type EmotionType = "우울" | "불안" | "분노" | "피로" | "행복" | "정리필요";
 
 export type MoodAnalysis = {
-  emotion: EmotionType;
+  mood: EmotionType | string;
   intensity: number;
-  comfort: string;
+  topics: string[];
+  message: string;
   action: string;
+  musicCategory: string;
+  playlist: string;
+  recommendedMusic: MusicTrack[];
+  notice: string;
+  emotion: EmotionType | string;
+  comfort: string;
   tracks: MusicTrack[];
 };
 
 export type DiaryEntry = {
   id: string;
   content: string;
-  mood: EmotionType;
+  mood: EmotionType | string;
   analysis: MoodAnalysis;
   recommendedMusic: MusicTrack[];
   createdAt: string;
@@ -73,12 +80,20 @@ export function analyzeMood(input: string): MoodAnalysis {
   const best = scored.sort((a, b) => b.matches - a.matches)[0];
 
   if (!best || best.matches === 0) {
+    const recommendedMusic = recommendedTracks.slice(0, 3);
     return {
-      emotion: "정리필요",
+      mood: "정리필요",
       intensity: Math.min(55, Math.max(25, Math.round(normalized.length / 3))),
-      comfort: "아직 감정의 이름이 선명하지 않아도 괜찮아요. 천천히 적다 보면 마음의 방향이 보일 수 있어요.",
+      topics: ["감정정리"],
+      message: "아직 감정의 이름이 선명하지 않아도 괜찮아요. 천천히 적다 보면 마음의 방향이 보일 수 있어요.",
       action: "지금 가장 크게 남아 있는 생각을 한 문장으로 다시 적어보세요.",
-      tracks: recommendedTracks.slice(0, 3),
+      musicCategory: "감정회복",
+      playlist: "마음정리 힐링음악",
+      recommendedMusic,
+      notice: "일상적인 감정정리와 셀프케어를 돕는 참고용 결과입니다.",
+      emotion: "정리필요",
+      comfort: "아직 감정의 이름이 선명하지 않아도 괜찮아요. 천천히 적다 보면 마음의 방향이 보일 수 있어요.",
+      tracks: recommendedMusic,
     };
   }
 
@@ -90,11 +105,29 @@ export function analyzeMood(input: string): MoodAnalysis {
     .filter((track) => best.rule.categories.includes(track.category))
     .slice(0, 3);
 
+  const musicCategory = best.rule.categories[0] ?? "감정회복";
+  const message = best.rule.comfort;
+  const playlist =
+    best.emotion === "불안"
+      ? "불안할 때 듣는 힐링음악"
+      : best.emotion === "피로"
+        ? "잠들기 전 마음정리"
+        : best.emotion === "행복"
+          ? "출근길 긍정 에너지"
+          : "감정회복 힐링음악";
+
   return {
-    emotion: best.emotion,
+    mood: best.emotion,
     intensity,
-    comfort: best.rule.comfort,
+    topics: best.rule.keywords.filter((keyword) => normalized.includes(keyword)).slice(0, 3),
+    message,
     action: best.rule.action,
+    musicCategory,
+    playlist,
+    recommendedMusic: tracks.length >= 3 ? tracks : recommendedTracks.slice(0, 3),
+    notice: "일상적인 감정정리와 셀프케어를 돕는 참고용 결과입니다.",
+    emotion: best.emotion,
+    comfort: message,
     tracks: tracks.length >= 3 ? tracks : recommendedTracks.slice(0, 3),
   };
 }

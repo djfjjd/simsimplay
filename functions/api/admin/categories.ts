@@ -10,7 +10,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   await ensureAdminSchema(env.DB);
 
   const { results } = await env.DB.prepare(
-    "SELECT id, name, created_at FROM music_categories ORDER BY id ASC",
+    "SELECT id, name, created_at FROM categories ORDER BY id ASC",
   ).all<CategoryRow>();
 
   return Response.json({ categories: results });
@@ -26,12 +26,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     return jsonError("category name is required");
   }
 
-  await env.DB.prepare("INSERT OR IGNORE INTO music_categories (name) VALUES (?)")
+  await env.DB.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)")
     .bind(name)
     .run();
 
   const category = await env.DB.prepare(
-    "SELECT id, name, created_at FROM music_categories WHERE name = ?",
+    "SELECT id, name, created_at FROM categories WHERE name = ?",
   )
     .bind(name)
     .first<CategoryRow>();

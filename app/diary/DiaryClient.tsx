@@ -61,7 +61,10 @@ function normalizeEntry(value: unknown): DiaryEntry | null {
   return {
     id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
     content,
-    mood: analysis.emotion,
+    mood:
+      typeof value.mood === "string"
+        ? value.mood
+        : analysis.mood || analysis.emotion || "정리필요",
     analysis,
     recommendedMusic,
     createdAt:
@@ -139,7 +142,7 @@ export function DiaryClient() {
               <div>
                 <p className="text-sm text-slate-400">{formatDate(entry.createdAt)}</p>
                 <h2 className="mt-2 text-2xl font-bold text-white">
-                  {entry.analysis.emotion} · {entry.analysis.intensity}/100
+                  {entry.mood} · {entry.analysis.intensity}/100
                 </h2>
               </div>
               <button

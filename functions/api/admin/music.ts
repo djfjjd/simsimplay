@@ -1,114 +1,143 @@
-import { ensureAdminSchema, jsonError } from "./_schema";
+import {
+  clampEnergyScore,
+  ensureAdminSchema,
+  jsonError,
+  mapSong,
+  normalizeTags,
+  type SongRow,
+} from "./_schema";
 
-type MusicRow = {
-  id: number;
-  category_id: number;
-  category_name: string;
-  title: string;
-  source_type: "youtube" | "spotify";
-  source_url: string;
-  created_at: string;
+type MusicPayload = {
+  id?: unknown;
+  categoryId?: unknown;
+  title?: unknown;
+  description?: unknown;
+  moodTags?: unknown;
+  situationTags?: unknown;
+  energyScore?: unknown;
+  audioUrl?: unknown;
+  thumbnailUrl?: unknown;
+  youtubeUrl?: unknown;
+  spotifyUrl?: unknown;
+  appleMusicUrl?: unknown;
+  duration?: unknown;
+  sourceUrl?: unknown;
 };
 
-function detectSourceType(url: string): "youtube" | "spotify" | null {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
-    if (host.includes("spotify.com")) return "spotify";
-    return null;
-  } catch {
-    return null;
-  }
+const songSelect = `
+  SELECT
+    songs.id,
+    songs.category_id,
+    categories.name AS category_name,
+    songs.title,
+    songs.description,
+    songs.mood_tags,
+    songs.situation_tags,
+    songs.energy_score,
+    songs.audio_url,
+    songs.thumbnail_url,
+    songs.youtube_url,
+    songs.spotify_url,
+    songs.apple_music_url,
+    songs.duration,
+    songs.created_at,
+    songs.updated_at
+  FROM songs
+  LEFT JOIN categories ON categories.id = songs.category_id
+`;
+
+function textValue(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
 }
 
-function fallbackTitle(sourceType: "youtube" | "spotify", categoryName: string) {
-  return `${categoryName} ${sourceType === "spotify" ? "Spotify" : "YouTube"} 음악`;
+function optionalUrl(value: unknown, fallback = "#") {
+  const url = textValue(value);
+  return url || fallback;
+}
+
+function linkPayload(payload: MusicPayload | null) {
+  const sourceUrl = textValue(payload?.sourceUrl);
+  const youtubeUrl = textValue(payload?.youtubeUrl) || (sourceUrl.includes("youtu") ? sourceUrl : "#");
+  const spotifyUrl = textValue(payload?.spotifyUrl) || (sourceUrl.includes("spotify") ? sourceUrl : "#");
+  return { youtubeUrl, spotifyUrl };
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   await ensureAdminSchema(env.DB);
 
-  const { results } = await env.DB.prepare(
-    `
-      SELECT
-        music_tracks.id,
-        music_tracks.category_id,
-        music_categories.name AS category_name,
-        music_tracks.title,
-        music_tracks.source_type,
-        music_tracks.source_url,
-        music_tracks.created_at
-      FROM music_tracks
-      JOIN music_categories ON music_categories.id = music_tracks.category_id
-      ORDER BY music_tracks.id DESC
-    `,
-  ).all<MusicRow>();
+  const { results } = await env.DB.prepare(`${songSelect} ORDER BY songs.id DESC`).all<SongRow>();
 
-  return Response.json({ tracks: results });
+  return Response.json({ tracks: results.map(mapSong), songs: results.map(mapSong) });
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   await ensureAdminSchema(env.DB);
 
-  const payload = await request
-    .json<{ categoryId?: unknown; title?: unknown; sourceUrl?: unknown }>()
-    .catch(() => null);
+  const payload = await request.json<MusicPayload>().catch(() => null);
+  const title = textValue(payload?.title);
   const categoryId =
-    typeof payload?.categoryId === "number" ? Math.trunc(payload.categoryId) : 0;
-  const sourceUrl =
-    typeof payload?.sourceUrl === "string" ? payload.sourceUrl.trim() : "";
-  const sourceType = detectSourceType(sourceUrl);
+    typeof payload?.categoryId === "number" ? Math.trunc(payload.categoryId) : null;
 
+  if (!title) return jsonError("title is required");
   if (!categoryId) return jsonError("categoryId is required");
-  if (!sourceUrl) return jsonError("YouTube or Spotify link is required");
-  if (!sourceType) return jsonError("Only YouTube or Spotify links are supported");
 
-  const category = await env.DB.prepare(
-    "SELECT id, name FROM music_categories WHERE id = ?",
-  )
+  const category = await env.DB.prepare("SELECT id FROM categories WHERE id = ?")
     .bind(categoryId)
-    .first<{ id: number; name: string }>();
-
+    .first<{ id: number }>();
   if (!category) return jsonError("category not found", 404);
 
-  const title =
-    typeof payload?.title === "string" && payload.title.trim()
-      ? payload.title.trim()
-      : fallbackTitle(sourceType, category.name);
-
+  const links = linkPayload(payload);
   const result = await env.DB.prepare(
     `
-      INSERT INTO music_tracks (category_id, title, source_type, source_url)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO songs (
+        category_id,
+        title,
+        description,
+        mood_tags,
+        situation_tags,
+        energy_score,
+        audio_url,
+        thumbnail_url,
+        youtube_url,
+        spotify_url,
+        apple_music_url,
+        duration
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   )
-    .bind(category.id, title, sourceType, sourceUrl)
+    .bind(
+      categoryId,
+      title,
+      textValue(payload?.description),
+      JSON.stringify(normalizeTags(payload?.moodTags)),
+      JSON.stringify(normalizeTags(payload?.situationTags)),
+      clampEnergyScore(payload?.energyScore),
+      optionalUrl(payload?.audioUrl),
+      textValue(payload?.thumbnailUrl),
+      links.youtubeUrl,
+      links.spotifyUrl,
+      optionalUrl(payload?.appleMusicUrl),
+      textValue(payload?.duration, "-") || "-",
+    )
     .run();
 
-  return Response.json(
-    {
-      track: {
-        id: result.meta.last_row_id,
-        category_id: category.id,
-        category_name: category.name,
-        title,
-        source_type: sourceType,
-        source_url: sourceUrl,
-      },
-    },
-    { status: 201 },
-  );
+  const song = await env.DB.prepare(`${songSelect} WHERE songs.id = ?`)
+    .bind(result.meta.last_row_id)
+    .first<SongRow>();
+
+  return Response.json({ track: song ? mapSong(song) : null, song: song ? mapSong(song) : null }, { status: 201 });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) => {
   await ensureAdminSchema(env.DB);
 
-  const payload = await request.json<{ id?: unknown }>().catch(() => null);
+  const payload = await request.json<MusicPayload>().catch(() => null);
   const id = typeof payload?.id === "number" ? Math.trunc(payload.id) : 0;
 
   if (!id) return jsonError("music id is required");
 
-  await env.DB.prepare("DELETE FROM music_tracks WHERE id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM songs WHERE id = ?").bind(id).run();
 
   return Response.json({ ok: true });
 };
