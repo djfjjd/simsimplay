@@ -81,6 +81,59 @@ export function getTodayGanji(date = new Date()): GanjiInfo {
   };
 }
 
+export function getHourGanji(dayStem: string, hourName: string): string {
+  if (hourName === "모름") return "??";
+  
+  const branches = ["자", "축", "인", "묘", "진", "사", "오", "미", "신", "유", "술", "해"];
+  const branchIndex = branches.indexOf(hourName);
+  if (branchIndex === -1) return "??";
+
+  const stemMap: Record<string, number> = {
+    "갑": 0, "기": 0,
+    "을": 2, "경": 2,
+    "병": 4, "신": 4,
+    "정": 6, "임": 6,
+    "무": 8, "계": 8
+  };
+  
+  const startStemIndex = stemMap[dayStem] ?? 0;
+  const hourStemIndex = (startStemIndex + branchIndex) % 10;
+  
+  return heavenlyStems[hourStemIndex] + earthlyBranches[branchIndex];
+}
+
+export type SajuResult = {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  description: string;
+};
+
+export function calculateSaju(birthDate: string, birthHour: string): SajuResult {
+  const d = new Date(birthDate);
+  const info = getTodayGanji(d);
+  const hourGanji = getHourGanji(info.dayStem, birthHour);
+  
+  const element = getFiveElements(info.dayStem);
+  
+  const elementDescriptions: Record<string, string> = {
+    "목(木)": "생명력과 성장의 에너지를 타고나셨습니다. 새로운 일을 시작하는 추진력이 좋고 정이 많은 성품입니다.",
+    "화(火)": "열정과 표현력의 에너지를 타고나셨습니다. 솔직하고 화끈한 성격이며 주변을 밝게 만드는 매력이 있습니다.",
+    "토(土)": "안정과 신용의 에너지를 타고나셨습니다. 듬직하고 포용력이 있으며 현실적인 감각이 뛰어난 성품입니다.",
+    "금(金)": "결단력과 정의의 에너지를 타고나셨습니다. 명확한 판단력을 가졌으며 의리가 있고 섬세한 면모가 있습니다.",
+    "수(水)": "지혜와 유연함의 에너지를 타고나셨습니다. 사고가 깊고 이해심이 넓으며 상황에 대처하는 능력이 좋습니다."
+  };
+
+  return {
+    year: info.yearGanji,
+    month: info.monthGanji,
+    day: info.dayGanji,
+    hour: hourGanji,
+    description: `${element} 기운을 가진 사주입니다. ${elementDescriptions[element] || ""}`
+  };
+}
+
 export function getFiveElements(stem: string): string {
   const elementMap: Record<string, string> = {
     갑: "목(木)", 을: "목(木)",

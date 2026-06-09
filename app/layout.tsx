@@ -22,6 +22,7 @@ export default function RootLayout({
             </Link>
             <div className="flex items-center gap-6 text-sm font-medium">
               {[
+                ["운세", "/fortune"],
                 ["음악", "/music"],
                 ["일기", "/diary"],
                 ["소개", "/about"],
