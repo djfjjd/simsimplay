@@ -12,7 +12,7 @@ export function D1MusicClient() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    void fetch("/api/admin/music")
+    void fetch("/api/music")
       .then((response) => response.json())
       .then((data) => {
         const payload = data as { tracks: AdminMusicTrack[] };

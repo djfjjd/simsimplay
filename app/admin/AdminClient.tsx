@@ -10,6 +10,7 @@ function sourceLabel(sourceType: string) {
 }
 
 export function AdminClient() {
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [tracks, setTracks] = useState<AdminMusicTrack[]>([]);
   const [categoryName, setCategoryName] = useState("");
@@ -50,7 +51,17 @@ export function AdminClient() {
   }
 
   useEffect(() => {
-    void fetchAdminData()
+    void fetch("/api/auth/session")
+      .then((response) => response.json())
+      .then((data) => {
+        const session = data as { authenticated: boolean };
+        if (!session.authenticated) {
+          window.location.replace("/login");
+          return Promise.reject(new Error("unauthorized"));
+        }
+        setIsAuthorized(true);
+        return fetchAdminData();
+      })
       .then((data) => {
         setCategories(data.categories);
         setTracks(data.tracks);
@@ -63,6 +74,11 @@ export function AdminClient() {
         setIsLoading(false);
       });
   }, []);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.replace("/login");
+  }
 
   async function handleCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,9 +143,24 @@ export function AdminClient() {
     await loadData();
   }
 
+  if (!isAuthorized) {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-10 text-center text-slate-300">
+        관리자 세션을 확인하는 중입니다.
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
       <section className="space-y-6">
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="w-full rounded-full border border-white/10 bg-white/[0.07] px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+        >
+          로그아웃
+        </button>
         <form
           onSubmit={handleCreateCategory}
           className="rounded-3xl border border-white/10 bg-white/[0.07] p-5"

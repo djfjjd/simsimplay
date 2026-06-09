@@ -1,4 +1,5 @@
 import { ensureAdminSchema, jsonError } from "./_schema";
+import { requireAdmin } from "../auth/_session";
 
 type CategoryRow = {
   id: number;
@@ -6,7 +7,10 @@ type CategoryRow = {
   created_at: string;
 };
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
+  const unauthorized = await requireAdmin(request, env);
+  if (unauthorized) return unauthorized;
+
   await ensureAdminSchema(env.DB);
 
   const { results } = await env.DB.prepare(
@@ -17,6 +21,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
+  const unauthorized = await requireAdmin(request, env);
+  if (unauthorized) return unauthorized;
+
   await ensureAdminSchema(env.DB);
 
   const payload = await request.json<{ name?: unknown }>().catch(() => null);
@@ -38,4 +45,3 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   return Response.json({ category }, { status: 201 });
 };
-

@@ -27,7 +27,6 @@ export default function RootLayout({
                 ["플레이리스트", "/playlist"],
                 ["일기", "/diary"],
                 ["소개", "/about"],
-                ["관리자", "/admin"],
               ].map(([label, href]) => (
                 <Link
                   key={href}

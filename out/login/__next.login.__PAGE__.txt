@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[17092,["/_next/static/chunks/3rdqn8rx95pw7.js","/_next/static/chunks/14mrh2-p_w84d.js","/_next/static/chunks/126pw5z9czrpr.js"],"LoginClient"]
+3:I[97367,["/_next/static/chunks/3rdqn8rx95pw7.js","/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","main",null,{"className":"min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(236,72,153,0.2),transparent_30%),#080914] px-5 py-10 sm:px-8","children":["$","div",null,{"className":"mx-auto max-w-7xl","children":[["$","div",null,{"className":"mb-8 max-w-3xl","children":[["$","p",null,{"className":"mb-3 text-sm font-semibold text-pink-200","children":"Admin Login"}],["$","h1",null,{"className":"text-3xl font-bold tracking-tight text-white sm:text-5xl","children":"관리자 전용 로그인"}],["$","p",null,{"className":"mt-4 text-base leading-7 text-slate-300 sm:text-lg","children":"아이디는 admin, 비밀번호는 서버 환경변수 ADMIN_PASSWORD로 검증합니다."}]]}],["$","$L2",null,{}]]}]}],[["$","script","script-0",{"src":"/_next/static/chunks/126pw5z9czrpr.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"utnwUH_Gt5mQWVxW6DHb9"}
+5:null
