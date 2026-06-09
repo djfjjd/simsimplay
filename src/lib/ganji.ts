@@ -31,6 +31,14 @@ function formatDate(year: number, month: number, day: number) {
   return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
 }
 
+function getGanjiIndex(stem: number, branch: number) {
+  // Find i such that i % 10 = stem and i % 12 = branch
+  for (let i = 0; i < 60; i++) {
+    if (i % 10 === stem && i % 12 === branch) return i;
+  }
+  return 0;
+}
+
 function getGanjiByIndex(index: number) {
   const normalized = ((index % 60) + 60) % 60;
   return `${heavenlyStems[normalized % 10]}${earthlyBranches[normalized % 12]}`;
@@ -42,13 +50,30 @@ function daysBetweenUtc(a: Date, b: Date) {
 
 export function getTodayGanji(date = new Date()): GanjiInfo {
   const { year, month, day } = getKoreanDateParts(date);
+  
+  // 1. Year Ganji: Byeong-o (2026) -> Stem 2 (Byeong), Branch 6 (O)
+  const yearStem = (year - 4 + 10) % 10;
+  const yearBranch = (year - 4 + 12) % 12;
+  const yearGanjiIndex = getGanjiIndex(yearStem, yearBranch);
+  const yearGanji = getGanjiByIndex(yearGanjiIndex);
+
+  // 2. Month Ganji: Based on Year Stem and Month
+  // Standard rule (Simplified: Month changes on 1st of Gregorian month for this app)
+  const monthStemBase = (yearStem * 2 + 2) % 10; // Stem of the 1st month (Feb)
+  const monthStem = (monthStemBase + (month - 2 + 12) % 12) % 10;
+  const monthBranch = (2 + (month - 2 + 12) % 12) % 12; // Feb is In (2)
+  const monthGanjiIndex = getGanjiIndex(monthStem, monthBranch);
+  const monthGanji = getGanjiByIndex(monthGanjiIndex);
+
+  // 3. Day Ganji: Base 2024.01.01 was Gap-ja (0)
   const current = new Date(Date.UTC(year, month - 1, day));
-  const baseGap = daysBetweenUtc(current, new Date(Date.UTC(1984, 1, 2)));
-  const dayGanji = getGanjiByIndex(baseGap);
+  const base = new Date(Date.UTC(2024, 0, 1));
+  const diffDays = daysBetweenUtc(current, base);
+  const dayGanjiIndex = ((diffDays % 60) + 60) % 60;
+  const dayGanji = getGanjiByIndex(dayGanjiIndex);
+  
   const dayStem = dayGanji.slice(0, 1);
   const dayBranch = dayGanji.slice(1);
-  const yearGanji = getGanjiByIndex(year - 1984);
-  const monthGanji = getGanjiByIndex((year - 1984) * 12 + month + 1);
 
   return {
     dateText: formatDate(year, month, day),
