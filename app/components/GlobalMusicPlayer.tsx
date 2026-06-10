@@ -353,6 +353,7 @@ export function GlobalMiniPlayer() {
     seek,
     setVolume,
   } = useMusicPlayer();
+  const playerRef = useRef<HTMLElement | null>(null);
   const [isVolumeOpen, setIsVolumeOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
 
@@ -363,12 +364,29 @@ export function GlobalMiniPlayer() {
     : formatTime(progressMax);
   const queueLabel = queue.length > 0 ? `${currentIndex + 1}/${queue.length}` : "0/0";
 
+  useEffect(() => {
+    if (!isQueueOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (playerRef.current?.contains(target)) return;
+      setIsQueueOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isQueueOpen]);
+
   return (
     <section
+      ref={playerRef}
       aria-label="전역 음악 플레이어"
       className="relative w-full max-w-[42rem] rounded-xl border border-white/10 bg-[#0d1020]/95 px-3 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl"
     >
-      <div className="grid gap-2 sm:grid-cols-[minmax(7rem,1fr)_auto_minmax(5rem,0.45fr)] sm:items-center">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
         <div className="min-w-0 text-center sm:text-left">
           <p className="truncate text-sm font-bold leading-4 text-white">
             {currentTrack?.title ?? "재생할 음악을 선택해주세요"}
