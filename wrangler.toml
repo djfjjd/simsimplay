@@ -6,6 +6,11 @@ pages_build_output_dir = "out"
 [ai]
 binding = "AI"
 
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "simsimplay-media"
+preview_bucket_name = "simsimplay-media"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "simsimplay-db"

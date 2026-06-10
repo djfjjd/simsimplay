@@ -41,6 +41,7 @@ export function AdminClient() {
   const [form, setForm] = useState<SongForm>(emptyForm);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   // File States
@@ -87,16 +88,22 @@ export function AdminClient() {
     });
   }
 
-  // File Upload Logic (Separated for future R2 integration)
-  async function uploadAudioFile(file: File): Promise<string> {
-    // TODO: Actual R2 implementation here
-    // For now, return a temporary URL or filename
-    return URL.createObjectURL(file);
-  }
+  async function uploadFile(file: File, kind: "audio" | "image"): Promise<string> {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", kind);
 
-  async function uploadThumbnailFile(file: File): Promise<string> {
-    // TODO: Actual R2 implementation here
-    return URL.createObjectURL(file);
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body,
+    });
+    const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
+
+    if (!response.ok || !payload?.url) {
+      throw new Error(payload?.error || "파일 업로드에 실패했습니다.");
+    }
+
+    return payload.url;
   }
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,35 +229,49 @@ export function AdminClient() {
       return;
     }
 
-    let audioUrl = form.audioUrl;
-    let thumbnailUrl = form.thumbnailUrl;
+    setIsSaving(true);
+    setMessage("음악 파일을 저장하고 있습니다...");
 
-    // Actual upload logic if files exist
-    if (audioFile) audioUrl = await uploadAudioFile(audioFile);
-    if (thumbFile) thumbnailUrl = await uploadThumbnailFile(thumbFile);
+    try {
+      let audioUrl = form.audioUrl;
+      let thumbnailUrl = form.thumbnailUrl;
 
-    const payload = {
-      ...form,
-      audioUrl,
-      thumbnailUrl,
-      categoryId: Number(form.categoryId),
-      energyScore: Number(form.energyScore)
-    };
+      if (audioFile) audioUrl = await uploadFile(audioFile, "audio");
+      if (thumbFile) thumbnailUrl = await uploadFile(thumbFile, "image");
 
-    const response = await fetch(form.id ? `/api/songs/${form.id}` : "/api/songs", {
-      method: form.id ? "PUT" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      if (audioUrl.startsWith("blob:")) {
+        setMessage("기존 임시 음원 URL은 재생할 수 없습니다. MP3 파일을 다시 선택해주세요.");
+        return;
+      }
+      if (thumbnailUrl.startsWith("blob:")) thumbnailUrl = "";
 
-    if (!response.ok) {
-      setMessage("음악 저장에 실패했습니다.");
-      return;
+      const payload = {
+        ...form,
+        audioUrl,
+        thumbnailUrl,
+        categoryId: Number(form.categoryId),
+        energyScore: Number(form.energyScore)
+      };
+
+      const response = await fetch(form.id ? `/api/songs/${form.id}` : "/api/songs", {
+        method: form.id ? "PUT" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        setMessage("음악 저장에 실패했습니다.");
+        return;
+      }
+
+      setMessage(form.id ? "수정되었습니다." : "추가되었습니다.");
+      resetForm();
+      loadData({ showLoading: false });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "파일 업로드에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
     }
-
-    setMessage(form.id ? "수정되었습니다." : "추가되었습니다.");
-    resetForm();
-    loadData({ showLoading: false });
   }
 
   function resetForm() {
@@ -489,9 +510,10 @@ export function AdminClient() {
             </div>
             <button
               type="submit"
-              className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-10 py-4 font-bold text-white shadow-xl shadow-violet-900/20 hover:scale-105 active:scale-95 transition"
+              disabled={isSaving}
+              className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-10 py-4 font-bold text-white shadow-xl shadow-violet-900/20 hover:scale-105 active:scale-95 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {form.id ? "수정 완료" : "음악 등록하기"}
+              {isSaving ? "저장 중..." : form.id ? "수정 완료" : "음악 등록하기"}
             </button>
           </div>
         </form>
