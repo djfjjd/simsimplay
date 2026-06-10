@@ -59,10 +59,10 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function formatTime(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+  if (!Number.isFinite(seconds) || seconds <= 0) return "00:00";
   const minutes = Math.floor(seconds / 60);
   const rest = Math.floor(seconds % 60);
-  return `${minutes}:${String(rest).padStart(2, "0")}`;
+  return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
 function readStoredState(): StoredPlayerState | null {
@@ -285,7 +285,6 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   return (
     <MusicPlayerContext.Provider value={value}>
       {children}
-      <GlobalMiniPlayer />
       <audio
         ref={audioRef}
         preload="metadata"
@@ -337,7 +336,7 @@ function ControlButton({
   );
 }
 
-function GlobalMiniPlayer() {
+export function GlobalMiniPlayer() {
   const {
     currentTrack,
     currentIndex,
@@ -356,73 +355,75 @@ function GlobalMiniPlayer() {
 
   const progressMax = duration || 0;
   const progressValue = progressMax ? Math.min(currentTime, progressMax) : 0;
+  const totalTimeLabel = currentTrack?.durationLabel && currentTrack.durationLabel !== "-"
+    ? currentTrack.durationLabel
+    : formatTime(progressMax);
 
   return (
-    <div className="fixed left-1/2 top-[4.65rem] z-40 w-[min(calc(100vw-1rem),46rem)] -translate-x-1/2 px-2 sm:top-4 sm:px-0">
-      <div className="rounded-2xl border border-white/10 bg-[#0d1020]/95 p-3 shadow-2xl shadow-black/35 backdrop-blur-xl">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_9rem] sm:items-center">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">
-              {currentTrack?.title ?? "재생할 음악을 선택해주세요"}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-slate-400">
-              {currentTrack?.description || currentTrack?.artist || "SimSimPlay 전역 플레이어"}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2">
-            <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
-              <span aria-hidden="true">‹‹</span>
-            </ControlButton>
-            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
-              <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
-            </ControlButton>
-            <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
-              <span aria-hidden="true">››</span>
-            </ControlButton>
-          </div>
-
-          <label className="flex items-center gap-2 text-xs text-slate-400">
-            <span className="shrink-0">Vol</span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(event) => setVolume(Number(event.target.value))}
-              className="h-1 w-full accent-pink-400"
-              aria-label="볼륨"
-            />
-          </label>
+    <section
+      aria-label="전역 음악 플레이어"
+      className="w-full max-w-[42rem] rounded-2xl border border-white/10 bg-[#0d1020]/95 px-3 py-2 shadow-xl shadow-black/25 backdrop-blur-xl"
+    >
+      <div className="grid gap-2 sm:grid-cols-[minmax(7rem,1fr)_auto_minmax(7rem,0.8fr)] sm:items-center">
+        <div className="min-w-0 text-center sm:text-left">
+          <p className="truncate text-sm font-bold leading-5 text-white">
+            {currentTrack?.title ?? "재생할 음악을 선택해주세요"}
+          </p>
+          <p className="truncate text-[11px] leading-4 text-slate-400">
+            {currentTrack?.description || currentTrack?.artist || "SimSimPlay 전역 플레이어"}
+          </p>
         </div>
 
-        <div className="mt-3 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 text-[11px] tabular-nums text-slate-500">
-          <span>{formatTime(progressValue)}</span>
+        <div className="flex items-center justify-center gap-2">
+          <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
+            <span aria-hidden="true">‹‹</span>
+          </ControlButton>
+          <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
+            <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
+          </ControlButton>
+          <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
+            <span aria-hidden="true">››</span>
+          </ControlButton>
+        </div>
+
+        <label className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-slate-400">
+          <span className="shrink-0">Vol</span>
           <input
             type="range"
             min="0"
-            max={progressMax || 0}
-            step="0.1"
-            value={progressValue}
-            disabled={!canPlayCurrentTrack || progressMax === 0}
-            onChange={(event) => seek(Number(event.target.value))}
-            className="h-1 w-full accent-pink-400 disabled:opacity-40"
-            aria-label="재생 위치"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(event) => setVolume(Number(event.target.value))}
+            className="h-1 w-full min-w-20 accent-pink-400"
+            aria-label="볼륨"
           />
-          <span className="text-right">{currentTrack?.durationLabel || formatTime(progressMax)}</span>
-        </div>
-
-        {currentTrack && !canPlayCurrentTrack ? (
-          <p className="mt-2 truncate text-center text-[11px] text-amber-200">
-            이 곡은 아직 재생 가능한 음원 URL이 없습니다.
-          </p>
-        ) : (
-          <p className="mt-2 text-center text-[11px] text-slate-600">
-            {queue.length > 1 ? `${currentIndex + 1} / ${queue.length}` : "SimSimPlay"}
-          </p>
-        )}
+        </label>
       </div>
-    </div>
+
+      <div className="mt-2 grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2 text-[11px] tabular-nums text-slate-400">
+        <span className="whitespace-nowrap">{formatTime(progressValue)} / {totalTimeLabel}</span>
+        <input
+          type="range"
+          min="0"
+          max={progressMax || 0}
+          step="0.1"
+          value={progressValue}
+          disabled={!canPlayCurrentTrack || progressMax === 0}
+          onChange={(event) => seek(Number(event.target.value))}
+          className="h-1 w-full accent-pink-400 disabled:opacity-40"
+          aria-label="재생 위치"
+        />
+        <span className="text-right text-slate-600">
+          {queue.length > 1 ? `${currentIndex + 1}/${queue.length}` : "1/1"}
+        </span>
+      </div>
+
+      {currentTrack && !canPlayCurrentTrack ? (
+        <p className="mt-1 truncate text-center text-[11px] text-amber-200">
+          이 곡은 아직 재생 가능한 음원 URL이 없습니다.
+        </p>
+      ) : null}
+    </section>
   );
 }
