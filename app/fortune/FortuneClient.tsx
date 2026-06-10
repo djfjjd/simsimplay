@@ -14,10 +14,12 @@ type Report = {
   counts: Record<ElementKey, number>;
   dominant: ElementKey;
   weak: ElementKey;
+  summary: string;
   recommendedCategory: string;
   playlistName: string;
   tracks: MusicTrack[];
-  sections: Array<{ title: string; body: string; accent: string }>;
+  timeline: Array<{ title: string; body: string }>;
+  adviceSections: Array<{ title: string; body: string }>;
 };
 
 const hours = [
@@ -246,24 +248,27 @@ function buildReport(result: SajuResult, gender: Gender): Report {
     counts,
     dominant,
     weak,
+    summary: `${dominant} 기운이 중심을 잡고 ${weak} 기운을 보완할수록 삶의 균형이 좋아지는 사주입니다.`,
     recommendedCategory: weakAdvice.category,
     playlistName: weakAdvice.playlist,
     tracks,
-    sections: [
-      { title: "타고난 성향 분석", body: `${gender} 사주 기준으로 ${dominant} 기운이 중심입니다. ${profile.strength}`, accent: "from-violet-500/20 to-blue-500/10" },
-      { title: "어린 시절", body: profile.childhood, accent: "from-sky-500/20 to-cyan-500/10" },
-      { title: "10대", body: profile.teens, accent: "from-emerald-500/20 to-teal-500/10" },
-      { title: "20대", body: profile.twenties, accent: "from-pink-500/20 to-rose-500/10" },
-      { title: "30대 이후 인생 흐름", body: profile.later, accent: "from-amber-500/20 to-yellow-500/10" },
-      { title: "향후 5년 운세", body: profile.fiveYears, accent: "from-indigo-500/20 to-violet-500/10" },
-      { title: "재물운", body: profile.money, accent: "from-lime-500/20 to-emerald-500/10" },
-      { title: "직업운", body: profile.career, accent: "from-blue-500/20 to-slate-500/10" },
-      { title: "연애운", body: profile.love, accent: "from-fuchsia-500/20 to-pink-500/10" },
-      { title: "건강운", body: profile.health, accent: "from-cyan-500/20 to-blue-500/10" },
-      { title: "부족한 오행 분석", body: `${weak} 기운이 가장 약하게 나타납니다. ${weakAdvice.analysis}`, accent: "from-orange-500/20 to-red-500/10" },
-      { title: "부족한 오행 보완 방법", body: weakAdvice.supplement, accent: "from-green-500/20 to-emerald-500/10" },
-      { title: "주의해야 할 행동", body: profile.caution, accent: "from-red-500/20 to-rose-500/10" },
-      { title: "추천 생활 습관", body: profile.habit, accent: "from-teal-500/20 to-sky-500/10" },
+    timeline: [
+      { title: "어린 시절", body: profile.childhood },
+      { title: "10대", body: profile.teens },
+      { title: "20대", body: profile.twenties },
+      { title: "30대 이후", body: profile.later },
+      { title: "향후 5년", body: profile.fiveYears },
+    ],
+    adviceSections: [
+      { title: "타고난 성향 분석", body: `${gender} 사주 기준으로 ${dominant} 기운이 중심입니다. ${profile.strength}` },
+      { title: "재물운", body: profile.money },
+      { title: "직업운", body: profile.career },
+      { title: "연애운", body: profile.love },
+      { title: "건강운", body: profile.health },
+      { title: "부족한 오행 분석", body: `${weak} 기운이 가장 약하게 나타납니다. ${weakAdvice.analysis}` },
+      { title: "부족한 오행 보완 방법", body: weakAdvice.supplement },
+      { title: "주의해야 할 행동", body: `${profile.caution} 선택지를 줄이고 실행 단위를 작게 나누는 것이 좋습니다.` },
+      { title: "추천 생활 습관", body: profile.habit },
     ],
   };
 }
@@ -282,12 +287,12 @@ function DonutChart({ counts }: { counts: Record<ElementKey, number> }) {
   return (
     <div className="flex items-center justify-center">
       <div
-        className="relative h-48 w-48 rounded-full shadow-2xl shadow-black/30"
+        className="relative h-36 w-36 rounded-full shadow-2xl shadow-black/30 sm:h-40 sm:w-40"
         style={{ background: `conic-gradient(${stops.join(", ")})` }}
       >
-        <div className="absolute inset-8 flex flex-col items-center justify-center rounded-full bg-[#0d1020] text-center">
+        <div className="absolute inset-6 flex flex-col items-center justify-center rounded-full bg-[#0d1020] text-center">
           <span className="text-xs font-bold text-slate-500">총 오행</span>
-          <span className="text-4xl font-black text-white">{total}</span>
+          <span className="text-3xl font-black text-white">{total}</span>
         </div>
       </div>
     </div>
@@ -320,12 +325,68 @@ function ElementBars({ counts }: { counts: Record<ElementKey, number> }) {
   );
 }
 
-function ReportCard({ title, body, accent }: { title: string; body: string; accent: string }) {
+function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
-    <article className={`rounded-3xl border border-white/10 bg-gradient-to-br ${accent} p-5 shadow-xl shadow-black/20`}>
-      <h3 className="text-lg font-black text-white">{title}</h3>
-      <p className="mt-3 text-sm leading-7 text-slate-300">{body}</p>
-    </article>
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+      <p className="text-xs font-bold text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function LifeTimeline({ items }: { items: Report["timeline"] }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-6">
+      <div className="mb-8">
+        <p className="text-sm font-bold text-pink-200">인생 흐름 타임라인</p>
+        <h2 className="mt-2 text-2xl font-black text-white">과거에서 향후 5년까지 한눈에 보기</h2>
+      </div>
+
+      <div className="hidden grid-cols-5 gap-0 md:grid">
+        {items.map((item, index) => (
+          <div key={item.title} className="relative px-3 text-center">
+            <div className="absolute left-0 right-0 top-3 h-px bg-white/15" />
+            {index === 0 ? <div className="absolute left-0 top-3 h-px w-1/2 bg-[#0d1020]" /> : null}
+            {index === items.length - 1 ? <div className="absolute right-0 top-3 h-px w-1/2 bg-[#0d1020]" /> : null}
+            <div className="relative mx-auto h-6 w-6 rounded-full border-4 border-[#0d1020] bg-pink-300 shadow-lg shadow-pink-500/20" />
+            <h3 className="mt-4 text-sm font-black text-white">{item.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-400">{item.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-0 md:hidden">
+        {items.map((item, index) => (
+          <div key={item.title} className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3 pb-6 last:pb-0">
+            {index !== items.length - 1 ? <div className="absolute bottom-0 left-3 top-6 w-px bg-white/15" /> : null}
+            <div className="relative mt-1 h-6 w-6 rounded-full border-4 border-[#0d1020] bg-pink-300" />
+            <div>
+              <h3 className="text-base font-black text-white">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{item.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AdviceReport({ sections }: { sections: Report["adviceSections"] }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-7">
+      <div className="mb-2">
+        <p className="text-sm font-bold text-pink-200">상세 조언 리포트</p>
+        <h2 className="mt-2 text-2xl font-black text-white">운세별 핵심 해석</h2>
+      </div>
+      <div className="divide-y divide-white/10">
+        {sections.map((section) => (
+          <article key={section.title} className="py-5">
+            <h3 className="text-lg font-black text-white">{section.title}</h3>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-300">{section.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -416,63 +477,69 @@ export function FortuneClient() {
       </section>
 
       {report ? (
-        <div className="mt-8 space-y-6 text-left">
-          <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
-              <p className="text-sm font-bold text-pink-200">사주 원국</p>
-              <div className="mt-5 flex justify-center gap-3 sm:justify-start">
-                {[
-                  { label: "시주", val: report.result.hour },
-                  { label: "일주", val: report.result.day },
-                  { label: "월주", val: report.result.month },
-                  { label: "연주", val: report.result.year },
-                ].map((pillar) => (
-                  <div key={pillar.label} className="flex flex-col items-center">
-                    <div className="flex h-28 w-14 flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/25">
-                      <span className="text-2xl font-black text-white">{pillar.val[0] || "?"}</span>
-                      <span className="text-2xl font-black text-white">{pillar.val[1] || "?"}</span>
-                    </div>
-                    <span className="mt-2 text-xs font-bold text-slate-500">{pillar.label}</span>
-                  </div>
-                ))}
+        <div className="mt-8 space-y-8 text-left">
+          <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-5 shadow-xl shadow-black/20 sm:p-7">
+            <div className="grid gap-6 lg:grid-cols-[1fr_1.25fr] lg:items-center">
+              <div>
+                <p className="text-sm font-bold text-pink-200">상단 요약</p>
+                <h2 className="mt-2 text-3xl font-black text-white">AI 사주 리포트 핵심</h2>
+                <p className="mt-4 text-base leading-7 text-slate-300">{report.summary}</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <SummaryPill label="중심 오행" value={report.dominant} />
+                  <SummaryPill label="부족한 오행" value={report.weak} />
+                </div>
               </div>
-              <div className="mt-5 rounded-2xl bg-black/25 p-4">
-                <p className="text-sm leading-6 text-slate-300">
-                  중심 오행은 <strong className="text-white">{report.dominant}</strong>, 보완이 필요한 오행은{" "}
-                  <strong className="text-white">{report.weak}</strong>입니다. 아래 리포트는 입력값을 기반으로 한 SimSimPlay 해석입니다.
-                </p>
+
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-bold text-slate-400">사주 원국</p>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
+                    {report.gender}
+                  </span>
+                </div>
+                <div className="mt-5 flex justify-center gap-3 sm:justify-start">
+                  {[
+                    { label: "시주", val: report.result.hour },
+                    { label: "일주", val: report.result.day },
+                    { label: "월주", val: report.result.month },
+                    { label: "연주", val: report.result.year },
+                  ].map((pillar) => (
+                    <div key={pillar.label} className="flex flex-col items-center">
+                      <div className="flex h-24 w-14 flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/[0.04]">
+                        <span className="text-2xl font-black text-white">{pillar.val[0] || "?"}</span>
+                        <span className="text-2xl font-black text-white">{pillar.val[1] || "?"}</span>
+                      </div>
+                      <span className="mt-2 text-xs font-bold text-slate-500">{pillar.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+          </section>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
+          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-6">
+            <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-pink-200">오행 비율 시각화</p>
-                  <h2 className="mt-1 text-2xl font-black text-white">도넛 차트 & 막대 그래프</h2>
+                  <p className="text-sm font-bold text-pink-200">오행 비율</p>
+                  <h2 className="mt-1 text-2xl font-black text-white">기운의 균형</h2>
+                  <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
+                    도넛은 전체 비율, 막대는 각 오행의 상대 강도를 보여줍니다.
+                  </p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                  {report.gender}
-                </span>
               </div>
-              <div className="mt-6 grid gap-6 md:grid-cols-[0.9fr_1.1fr] md:items-center">
+              <div className="grid gap-5 md:grid-cols-[0.8fr_1.2fr] md:items-center">
                 <DonutChart counts={report.counts} />
                 <ElementBars counts={report.counts} />
               </div>
             </div>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {report.sections.map((section) => (
-              <ReportCard
-                key={section.title}
-                title={section.title}
-                body={section.body}
-                accent={section.accent}
-              />
-            ))}
-          </section>
+          <LifeTimeline items={report.timeline} />
 
-          <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-pink-500/10 p-5 shadow-xl shadow-black/20 sm:p-6">
+          <AdviceReport sections={report.adviceSections} />
+
+          <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-pink-500/10 p-5 shadow-xl shadow-black/20 sm:p-7">
             <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr] lg:items-start">
               <div>
                 <p className="text-sm font-bold text-pink-200">SimSimPlay 추천 음악</p>
