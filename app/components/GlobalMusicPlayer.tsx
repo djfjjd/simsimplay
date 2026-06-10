@@ -366,7 +366,7 @@ export function GlobalMiniPlayer() {
   return (
     <section
       aria-label="전역 음악 플레이어"
-      className="w-full max-w-[42rem] rounded-xl border border-white/10 bg-[#0d1020]/95 px-3 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl"
+      className="relative w-full max-w-[42rem] rounded-xl border border-white/10 bg-[#0d1020]/95 px-3 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl"
     >
       <div className="grid gap-2 sm:grid-cols-[minmax(7rem,1fr)_auto_minmax(5rem,0.45fr)] sm:items-center">
         <div className="min-w-0 text-center sm:text-left">
@@ -450,7 +450,7 @@ export function GlobalMiniPlayer() {
       </div>
 
       {isQueueOpen ? (
-        <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-[#111426]/98 p-1 shadow-2xl shadow-black/40 backdrop-blur-xl">
           {queue.map((track, index) => (
             <button
               key={`${track.id}-${index}`}
