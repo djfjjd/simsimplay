@@ -4,6 +4,7 @@ import {
   jsonError,
   mapSong,
   normalizeTags,
+  parseOptionalId,
   type SongRow,
 } from "../admin/_schema";
 
@@ -70,8 +71,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ env, request }) => {
 
   const payload = await request.json<SongPayload>().catch(() => null);
   const title = textValue(payload?.title);
-  const categoryId =
-    typeof payload?.categoryId === "number" ? Math.trunc(payload.categoryId) : null;
+  const categoryId = parseOptionalId(payload?.categoryId);
 
   if (!title) return jsonError("title is required");
 

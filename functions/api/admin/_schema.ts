@@ -223,7 +223,19 @@ export function clampEnergyScore(value: unknown) {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+export function parseOptionalId(value: unknown) {
+  const id =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : 0;
+  return Number.isFinite(id) && id > 0 ? Math.trunc(id) : null;
+}
+
 export function mapSong(row: SongRow) {
+  const moodTags = parseJsonArray(row.mood_tags);
+
   return {
     id: row.id,
     categoryId: row.category_id,
@@ -231,7 +243,8 @@ export function mapSong(row: SongRow) {
     title: row.title,
     prompt: row.prompt || "",
     description: row.description,
-    emotionTags: parseJsonArray(row.mood_tags),
+    emotionTags: moodTags,
+    moodTags,
     situationTags: parseJsonArray(row.situation_tags),
     timeTags: parseJsonArray(row.time_tags),
     energyScore: row.energy_score,
