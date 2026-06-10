@@ -4,9 +4,9 @@ import { FortuneClient } from "./FortuneClient";
 export default function FortunePage() {
   return (
     <PageShell
-      eyebrow="Saju Analysis"
-      title="간편 사주로 타고난 기운 확인하기"
-      description="이름과 성별 없이, 오직 생년월일과 시간만으로 나의 타고난 오행 기운과 성품을 분석해드립니다."
+      eyebrow="AI Saju Report"
+      title="AI 사주 리포트"
+      description="생년월일, 성별, 태어난 시간을 바탕으로 오행 비율과 인생 흐름, 운세별 조언, 추천 음악까지 한 번에 정리합니다."
       centered={true}
     >
       <FortuneClient />
