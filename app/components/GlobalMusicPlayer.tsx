@@ -349,28 +349,29 @@ export function GlobalMiniPlayer() {
     togglePlay,
     playNext,
     playPrevious,
+    playQueue,
     seek,
     setVolume,
   } = useMusicPlayer();
+  const [isVolumeOpen, setIsVolumeOpen] = useState(false);
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
 
   const progressMax = duration || 0;
   const progressValue = progressMax ? Math.min(currentTime, progressMax) : 0;
   const totalTimeLabel = currentTrack?.durationLabel && currentTrack.durationLabel !== "-"
     ? currentTrack.durationLabel
     : formatTime(progressMax);
+  const queueLabel = queue.length > 0 ? `${currentIndex + 1}/${queue.length}` : "0/0";
 
   return (
     <section
       aria-label="전역 음악 플레이어"
-      className="w-full max-w-[42rem] rounded-2xl border border-white/10 bg-[#0d1020]/95 px-3 py-2 shadow-xl shadow-black/25 backdrop-blur-xl"
+      className="w-full max-w-[42rem] rounded-xl border border-white/10 bg-[#0d1020]/95 px-3 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl"
     >
-      <div className="grid gap-2 sm:grid-cols-[minmax(7rem,1fr)_auto_minmax(7rem,0.8fr)] sm:items-center">
+      <div className="grid gap-2 sm:grid-cols-[minmax(7rem,1fr)_auto_minmax(5rem,0.45fr)] sm:items-center">
         <div className="min-w-0 text-center sm:text-left">
-          <p className="truncate text-sm font-bold leading-5 text-white">
+          <p className="truncate text-sm font-bold leading-4 text-white">
             {currentTrack?.title ?? "재생할 음악을 선택해주세요"}
-          </p>
-          <p className="truncate text-[11px] leading-4 text-slate-400">
-            {currentTrack?.description || currentTrack?.artist || "SimSimPlay 전역 플레이어"}
           </p>
         </div>
 
@@ -386,22 +387,41 @@ export function GlobalMiniPlayer() {
           </ControlButton>
         </div>
 
-        <label className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-slate-400">
-          <span className="shrink-0">Vol</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={(event) => setVolume(Number(event.target.value))}
-            className="h-1 w-full min-w-20 accent-pink-400"
-            aria-label="볼륨"
-          />
-        </label>
+        <div className="relative flex justify-center sm:justify-end">
+          <button
+            type="button"
+            aria-label="볼륨 조절 열기"
+            aria-expanded={isVolumeOpen}
+            title="볼륨"
+            onClick={() => setIsVolumeOpen((value) => !value)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+          >
+            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.8v7.6a4 4 0 0 0 0-7.6Zm0-3.2v2.1a6 6 0 0 1 0 9.8V19a8 8 0 0 0 0-14Z" />
+            </svg>
+          </button>
+
+          {isVolumeOpen ? (
+            <div className="absolute right-0 top-10 z-20 w-36 rounded-xl border border-white/10 bg-[#111426] p-3 shadow-xl shadow-black/30">
+              <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-400">
+                <span className="tabular-nums">{Math.round(volume * 100)}</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={(event) => setVolume(Number(event.target.value))}
+                  className="h-1 w-full accent-pink-400"
+                  aria-label="볼륨"
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2 text-[11px] tabular-nums text-slate-400">
+      <div className="mt-1.5 grid grid-cols-[5.5rem_minmax(0,1fr)_4.25rem] items-center gap-2 text-[11px] tabular-nums text-slate-400">
         <span className="whitespace-nowrap">{formatTime(progressValue)} / {totalTimeLabel}</span>
         <input
           type="range"
@@ -414,10 +434,47 @@ export function GlobalMiniPlayer() {
           className="h-1 w-full accent-pink-400 disabled:opacity-40"
           aria-label="재생 위치"
         />
-        <span className="text-right text-slate-600">
-          {queue.length > 1 ? `${currentIndex + 1}/${queue.length}` : "1/1"}
-        </span>
+        <button
+          type="button"
+          aria-label="재생목록 열기"
+          aria-expanded={isQueueOpen}
+          disabled={queue.length === 0}
+          onClick={() => setIsQueueOpen((value) => !value)}
+          className="flex items-center justify-end gap-1 rounded-md px-1 py-0.5 text-right text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span>{queueLabel}</span>
+          <span aria-hidden="true" className={isQueueOpen ? "text-[10px] leading-none" : "rotate-180 text-[10px] leading-none"}>
+            ▴
+          </span>
+        </button>
       </div>
+
+      {isQueueOpen ? (
+        <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1">
+          {queue.map((track, index) => (
+            <button
+              key={`${track.id}-${index}`}
+              type="button"
+              onClick={() => {
+                playQueue(queue, index);
+                setIsQueueOpen(false);
+              }}
+              className={[
+                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition",
+                index === currentIndex ? "bg-pink-400/15 text-pink-100" : "text-slate-300 hover:bg-white/[0.06]",
+              ].join(" ")}
+            >
+              <span className="w-5 shrink-0 text-[10px] tabular-nums text-slate-500">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 truncate font-semibold">{track.title}</span>
+              {index === currentIndex ? (
+                <span className="ml-auto shrink-0 text-[10px] text-pink-200">재생중</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {currentTrack && !canPlayCurrentTrack ? (
         <p className="mt-1 truncate text-center text-[11px] text-amber-200">
