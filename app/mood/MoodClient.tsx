@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, Suspense } from "react";
+import { useCallback, useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   analyzeMood,
@@ -8,24 +9,20 @@ import {
   type DiaryEntry,
   type MoodAnalysis,
 } from "../lib/mood";
+import { useMusicPlayer, type PlayerTrack } from "../components/GlobalMusicPlayer";
 import { TodayFortuneMusic } from "../../src/components/TodayFortuneMusic";
 
 function MoodContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
+  const { playQueue } = useMusicPlayer();
   
   const [analysis, setAnalysis] = useState<MoodAnalysis | null>(null);
   const [saved, setSaved] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (query) {
-      handleAnalyze(query);
-    }
-  }, [query]);
-
-  async function handleAnalyze(text: string) {
+  const handleAnalyze = useCallback(async (text: string) => {
     setIsAnalyzing(true);
     setError("");
     setSaved(false);
@@ -54,7 +51,15 @@ function MoodContent() {
     } finally {
       setIsAnalyzing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (query) {
+      queueMicrotask(() => {
+        void handleAnalyze(query);
+      });
+    }
+  }, [handleAnalyze, query]);
 
   function handleSave() {
     if (!analysis || !query.trim()) return;
@@ -79,6 +84,18 @@ function MoodContent() {
     setSaved(true);
   }
 
+  function toPlayerTrack(track: MoodAnalysis["recommendedMusic"][number]): PlayerTrack {
+    return {
+      id: `recommend-${track.title}`,
+      title: track.title,
+      description: track.description,
+      src: track.musicUrl,
+      durationLabel: track.duration,
+    };
+  }
+
+  const recommendedQueue = analysis?.recommendedMusic.map(toPlayerTrack) ?? [];
+
   return (
     <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
       {/* Left Column: Analysis Results */}
@@ -91,9 +108,9 @@ function MoodContent() {
         ) : !analysis ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center space-y-6 text-center">
             <p className="text-xl text-slate-400">분석할 내용이 없습니다.</p>
-            <a href="/" className="rounded-full bg-white/10 px-8 py-3 font-bold hover:bg-white/20 transition">
+            <Link href="/" className="rounded-full bg-white/10 px-8 py-3 font-bold hover:bg-white/20 transition">
               메인으로 돌아가기
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="animate-in fade-in duration-700">
@@ -149,13 +166,12 @@ function MoodContent() {
                 추천 힐링음악
               </p>
               <div className="grid gap-3">
-                {analysis.recommendedMusic.map((track) => (
-                  <a
+                {analysis.recommendedMusic.map((track, index) => (
+                  <button
+                    type="button"
                     key={track.title}
-                    href={track.musicUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-5 transition hover:bg-white/10 hover:border-white/10"
+                    onClick={() => playQueue(recommendedQueue, index)}
+                    className="group flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-5 text-left transition hover:bg-white/10 hover:border-white/10"
                   >
                     <div>
                       <p className="font-bold text-white group-hover:text-pink-300 transition">{track.title}</p>
@@ -166,7 +182,7 @@ function MoodContent() {
                         <path d="M8 5v14l11-7z" />
                       </svg>
                     </div>
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -199,7 +215,7 @@ function MoodContent() {
           <div className="mt-6 rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/5 to-pink-500/5 p-6">
             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Guide</h3>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
-              분석 결과가 마음에 드셨나요? 저장된 일기는 상단 '일기' 메뉴에서 언제든 다시 확인할 수 있습니다.
+              분석 결과가 마음에 드셨나요? 저장된 일기는 상단 &apos;일기&apos; 메뉴에서 언제든 다시 확인할 수 있습니다.
             </p>
           </div>
         </div>

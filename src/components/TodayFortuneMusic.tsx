@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useMusicPlayer, type PlayerTrack } from "../../app/components/GlobalMusicPlayer";
 import {
   getFortuneKeywordByGanji,
   getFortuneSummary,
@@ -9,6 +10,7 @@ import {
 } from "../lib/ganji";
 
 export function TodayFortuneMusic() {
+  const { playQueue } = useMusicPlayer();
   const fortune = useMemo(() => {
     const ganji = getTodayGanji();
     return {
@@ -18,6 +20,18 @@ export function TodayFortuneMusic() {
       summary: getFortuneSummary(ganji),
     };
   }, []);
+
+  function toPlayerTrack(track: (typeof fortune.tracks)[number]): PlayerTrack {
+    return {
+      id: `fortune-${track.title}`,
+      title: track.title,
+      description: track.description,
+      src: track.musicUrl,
+      durationLabel: track.duration,
+    };
+  }
+
+  const queue = fortune.tracks.map(toPlayerTrack);
 
   return (
     <aside className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
@@ -43,11 +57,16 @@ export function TodayFortuneMusic() {
         {fortune.summary}
       </p>
       <div className="mt-5 space-y-3">
-        {fortune.tracks.map((track) => (
-          <a key={track.title} href={track.musicUrl} className="block rounded-2xl bg-white/[0.06] p-4 transition hover:bg-white/[0.1]">
+        {fortune.tracks.map((track, index) => (
+          <button
+            key={track.title}
+            type="button"
+            onClick={() => playQueue(queue, index)}
+            className="block w-full rounded-2xl bg-white/[0.06] p-4 text-left transition hover:bg-white/[0.1]"
+          >
             <p className="font-semibold text-white">{track.title}</p>
             <p className="mt-1 text-sm text-slate-400">{track.description}</p>
-          </a>
+          </button>
         ))}
       </div>
       <a

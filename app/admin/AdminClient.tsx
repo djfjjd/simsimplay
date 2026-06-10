@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { AdminCategory, Song } from "../lib/adminCatalog";
 
 const emotionOptions = ["수면", "평온", "치유", "불안", "우울", "집중", "희망", "행복", "외로움", "그리움", "명상", "회복"];
@@ -123,7 +123,7 @@ export function AdminClient() {
     }
   };
 
-  async function loadData({ showLoading = true } = {}) {
+  const loadData = useCallback(async ({ showLoading = true } = {}) => {
     if (showLoading) setIsLoading(true);
     try {
       const [catRes, songRes] = await Promise.all([
@@ -136,17 +136,23 @@ export function AdminClient() {
       setCategories(catData.categories);
       setSongs(songData.songs);
       
-      if (!form.categoryId && catData.categories.length > 0) {
-        setForm(prev => ({ ...prev, categoryId: String(catData.categories[0].id) }));
+      if (catData.categories.length > 0) {
+        setForm((prev) => (
+          prev.categoryId ? prev : { ...prev, categoryId: String(catData.categories[0].id) }
+        ));
       }
     } catch {
       setMessage("데이터를 불러오지 못했습니다.");
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadData();
+    });
+  }, [loadData]);
 
   async function handleAiTagging() {
     const prompt = form.prompt.trim();

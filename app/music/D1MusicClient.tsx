@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMusicPlayer, type PlayerTrack } from "../components/GlobalMusicPlayer";
 import type { Song } from "../lib/adminCatalog";
 
 type D1MusicClientProps = {
@@ -26,9 +27,20 @@ function serviceLinks(song: Song) {
   ].filter(([, href]) => typeof href === "string" && isPlayableUrl(href));
 }
 
+function toPlayerTrack(song: Song): PlayerTrack {
+  return {
+    id: `song-${song.id}`,
+    title: song.title,
+    description: song.description || song.prompt || song.categoryName,
+    src: song.audioUrl,
+    durationLabel: song.duration,
+  };
+}
+
 export function D1MusicClient({ fallbackSongs }: D1MusicClientProps) {
   const [songs, setSongs] = useState<Song[]>(fallbackSongs);
   const [isLoading, setIsLoading] = useState(true);
+  const { playQueue } = useMusicPlayer();
 
   useEffect(() => {
     void fetch("/api/songs")
@@ -53,6 +65,8 @@ export function D1MusicClient({ fallbackSongs }: D1MusicClientProps) {
     );
   }
 
+  const playableQueue = songs.filter((item) => isPlayableUrl(item.audioUrl)).map(toPlayerTrack);
+
   return (
     <div className="overflow-hidden border-y border-white/10">
       <div className="hidden grid-cols-[minmax(0,1fr)_110px_90px_210px] gap-4 border-b border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 md:grid">
@@ -67,6 +81,7 @@ export function D1MusicClient({ fallbackSongs }: D1MusicClientProps) {
           const links = serviceLinks(song);
           const canPlayAudio = isPlayableUrl(song.audioUrl);
           const needsReupload = song.audioUrl.startsWith("blob:");
+          const playableIndex = playableQueue.findIndex((track) => track.id === `song-${song.id}`);
 
           return (
             <li
@@ -107,14 +122,13 @@ export function D1MusicClient({ fallbackSongs }: D1MusicClientProps) {
 
               <div className="flex flex-wrap justify-start gap-2 md:justify-end">
                 {canPlayAudio ? (
-                  <a
-                    href={song.audioUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => playQueue(playableQueue, playableIndex)}
                     className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-pink-100"
                   >
                     Audio
-                  </a>
+                  </button>
                 ) : needsReupload ? (
                   <span className="rounded-full border border-amber-300/30 px-3 py-1.5 text-xs font-bold text-amber-200">
                     재업로드 필요
