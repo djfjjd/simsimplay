@@ -396,12 +396,12 @@ function DaewoonTimeline({
   direction: DaewoonDirection;
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-7">
+    <section className="h-full rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-pink-200">대운 흐름</p>
           <h2 className="mt-2 text-2xl font-black text-white">10년 단위로 보는 큰 흐름</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             대운은 약 10년 단위로 변화하는 큰 흐름을 참고용으로 정리한 것입니다.
           </p>
         </div>
@@ -413,23 +413,25 @@ function DaewoonTimeline({
       <div className="relative mt-7 space-y-0">
         <div className="absolute bottom-5 left-[0.7rem] top-5 w-px bg-white/15" />
         {items.map((item) => (
-          <article key={`${item.age}-${item.ganji}`} className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-4 pb-7 last:pb-0">
-            <div className="relative mt-1 h-6 w-6 rounded-full border-4 border-[#0d1020] bg-sky-300 shadow-lg shadow-sky-500/20" />
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-black text-white">{item.age}세 대운</h3>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                  {item.ganji}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {item.keywords.map((keyword) => (
-                  <span key={keyword} className="rounded-full bg-pink-300/10 px-3 py-1 text-xs font-bold text-pink-100">
-                    {keyword}
+          <article key={`${item.age}-${item.ganji}`} className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3 pb-4 last:pb-0">
+            <div className="relative mt-2 h-5 w-5 rounded-full border-4 border-[#0d1020] bg-sky-300 shadow-lg shadow-sky-500/20" />
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 className="text-base font-black text-white">{item.age}세 대운</h3>
+                  <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-slate-300">
+                    {item.ganji}
                   </span>
-                ))}
+                </div>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  {item.keywords.map((keyword) => (
+                    <span key={keyword} className="rounded-full bg-pink-300/10 px-2.5 py-1 text-xs font-bold text-pink-100">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <p className="mt-3 text-sm leading-7 text-slate-300">{item.description}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{item.description}</p>
             </div>
           </article>
         ))}
@@ -440,16 +442,16 @@ function DaewoonTimeline({
 
 function AdviceReport({ sections }: { sections: Report["adviceSections"] }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-7">
+    <section className="h-full rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-6">
       <div className="mb-2">
         <p className="text-sm font-bold text-pink-200">상세 조언 리포트</p>
         <h2 className="mt-2 text-2xl font-black text-white">운세별 핵심 해석</h2>
       </div>
       <div className="divide-y divide-white/10">
         {sections.map((section) => (
-          <article key={section.title} className="py-5">
-            <h3 className="text-lg font-black text-white">{section.title}</h3>
-            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-300">{section.body}</p>
+          <article key={section.title} className="py-4">
+            <h3 className="text-base font-black text-white">{section.title}</h3>
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">{section.body}</p>
           </article>
         ))}
       </div>
@@ -607,9 +609,10 @@ export function FortuneClient() {
             <p className="mt-3 text-sm leading-7 text-slate-300">{report.nextDaewoonGuide}</p>
           </section>
 
-          <DaewoonTimeline items={report.daewoon} direction={report.daewoonDirection} />
-
-          <AdviceReport sections={report.adviceSections} />
+          <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr] xl:items-start">
+            <DaewoonTimeline items={report.daewoon} direction={report.daewoonDirection} />
+            <AdviceReport sections={report.adviceSections} />
+          </div>
 
           <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-pink-500/10 p-5 shadow-xl shadow-black/20 sm:p-7">
             <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr] lg:items-start">
