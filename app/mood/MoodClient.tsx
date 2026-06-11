@@ -322,8 +322,7 @@ function MoodContent() {
             ) : null}
             
             <div className="mb-6 md:mb-8">
-              <p className="text-sm font-semibold tracking-wider text-violet-400 uppercase">AI 심리상담 리포트</p>
-              <h2 className="mt-2 text-3xl font-black text-white md:text-5xl">오늘의 마음 요약</h2>
+              <h2 className="text-3xl font-black text-white md:text-5xl">오늘의 마음 요약</h2>
               <p className="mt-4 text-sm leading-7 text-slate-300 md:text-base">{analysis.summary ?? analysis.message}</p>
               
               <div className="mt-6 grid gap-3">

@@ -580,7 +580,7 @@ export function FortuneClient() {
             disabled={birthDate.length !== 8}
             className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-7 py-4 font-bold text-white shadow-lg transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
           >
-            AI 사주 리포트
+            내 사주 분석하기
           </button>
         </form>
       </section>

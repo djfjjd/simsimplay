@@ -22,7 +22,7 @@ export function MainMoodInput() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="오늘 당신의 기분은 어떤가요? 마음을 들려주세요."
+          placeholder="오늘 당신의 기분은 어떤가요?"
           className="w-full min-h-[160px] rounded-3xl border border-white/10 bg-white/5 p-6 pr-24 text-lg leading-relaxed text-white placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-4 focus:ring-violet-500/10 transition-all backdrop-blur-sm"
         />
         <button

@@ -15,7 +15,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="mt-8 text-lg text-slate-300 sm:text-xl">
-            오늘 당신의 마음은 어떤가요? 한 문장으로 들려주세요.
+            오늘 당신의 마음은 어떤가요?
           </p>
           
           <MainMoodInput />
