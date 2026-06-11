@@ -554,17 +554,21 @@ export function FortuneClient() {
               <div className="flex h-full flex-col justify-between gap-6">
                 <div>
                   <p className="text-sm font-bold text-pink-200">사주풀이</p>
-                  <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">AI 사주 리포트 핵심</h2>
+                  <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">오늘의 운세</h2>
                   <p className="mt-4 text-base leading-7 text-slate-300">{report.summary}</p>
                   <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-sm font-bold text-pink-100">오늘의 운세</p>
-                    <p className="mt-2 text-sm leading-7 text-slate-300">{report.todayFortune}</p>
+                    <p className="text-sm leading-7 text-slate-300">{report.todayFortune}</p>
                   </div>
                 </div>
+              </div>
+            </section>
 
-                <div className="rounded-3xl border border-white/10 bg-black/20 p-4 md:p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-bold text-slate-400">사주 원국</p>
+            <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 shadow-xl shadow-black/20 md:p-7">
+              <div>
+                <p className="text-sm font-bold text-pink-200">오행 비율</p>
+                <h2 className="mt-2 text-2xl font-black text-white">사주원국</h2>
+                <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4 md:p-5">
+                  <div className="flex items-center justify-end">
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
                       {report.gender} · {report.birthYear}
                     </span>
@@ -586,13 +590,6 @@ export function FortuneClient() {
                     ))}
                   </div>
                 </div>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 shadow-xl shadow-black/20 md:p-7">
-              <div>
-                <p className="text-sm font-bold text-pink-200">오행 비율</p>
-                <h2 className="mt-2 text-2xl font-black text-white">기운의 균형</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <SummaryPill label="중심 오행" value={report.dominant} />
                   <SummaryPill label="부족한 오행" value={report.weak} />
