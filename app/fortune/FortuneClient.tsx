@@ -597,9 +597,9 @@ export function FortuneClient() {
                   <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
                     <p className="text-base leading-7 text-slate-300">{report.todayFortune}</p>
                   </div>
-                  <div className="mt-4 flex min-h-20 items-center justify-center text-center">
-                    <p className="text-4xl font-black tabular-nums text-white">{report.fortuneScore}/100점</p>
-                  </div>
+                </div>
+                <div className="mt-auto flex min-h-24 items-center justify-center text-center">
+                  <p className="text-4xl font-black tabular-nums text-white">{report.fortuneScore}/100점</p>
                 </div>
               </div>
             </section>
