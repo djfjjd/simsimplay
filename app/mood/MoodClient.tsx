@@ -9,11 +9,27 @@ import {
   type DiaryEntry,
   type MoodAnalysis,
 } from "../lib/mood";
+import type { MusicTrack } from "../lib/music";
 import { useMusicPlayer, type PlayerTrack } from "../components/GlobalMusicPlayer";
 import { TodayFortuneMusic } from "../../src/components/TodayFortuneMusic";
 
 const lastAnalysisKey = "simsimplay_last_analysis";
 const concernCandidates = ["진로", "돈", "가족", "인간관계", "건강", "수면", "자존감", "미래불안"];
+
+type UploadedSong = {
+  id?: number;
+  title: string;
+  description?: string;
+  categoryName?: string;
+  moodTags?: string[];
+  emotionTags?: string[];
+  situationTags?: string[];
+  audioUrl?: string;
+  youtubeUrl?: string;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
+  duration?: string;
+};
 
 function includesAny(text: string, keywords: string[]) {
   return keywords.some((keyword) => text.includes(keyword));
@@ -116,6 +132,68 @@ function buildCounselingAnalysis(result: MoodAnalysis, input: string): MoodAnaly
   };
 }
 
+function songToMusicTrack(song: UploadedSong): MusicTrack {
+  const tags = [
+    ...(Array.isArray(song.moodTags) ? song.moodTags : []),
+    ...(Array.isArray(song.emotionTags) ? song.emotionTags : []),
+    ...(Array.isArray(song.situationTags) ? song.situationTags : []),
+  ].map(String);
+
+  return {
+    title: song.title,
+    description: song.description || song.categoryName || "업로드한 힐링음악",
+    category: song.categoryName || "힐링음악",
+    moodTags: tags.length > 0 ? tags.slice(0, 4) : ["업로드", "힐링"],
+    tags,
+    duration: song.duration || "-",
+    musicUrl: song.audioUrl || "#",
+    youtubeUrl: song.youtubeUrl || "#",
+    spotifyUrl: song.spotifyUrl || "#",
+    appleMusicUrl: song.appleMusicUrl || "#",
+  };
+}
+
+function withRecommendedMusic(analysis: MoodAnalysis, recommendedMusic: MusicTrack[]): MoodAnalysis {
+  const musicReasons = Object.fromEntries(
+    recommendedMusic.map((track) => [
+      track.title,
+      `${track.category} 분위기와 ${track.moodTags.slice(0, 2).join(", ")} 태그가 오늘 감정의 흐름에 맞아 추천합니다.`,
+    ]),
+  );
+
+  return {
+    ...analysis,
+    recommendedMusic,
+    tracks: recommendedMusic,
+    musicReasons,
+  };
+}
+
+async function fetchUploadedRecommendations(analysis: MoodAnalysis): Promise<MusicTrack[]> {
+  const params = new URLSearchParams({
+    mood: String(analysis.mood || analysis.emotion || ""),
+    category: analysis.musicCategory || "",
+    situation: analysis.concernTopics?.[0] || analysis.topics[0] || "",
+    energy: String(analysis.intensity),
+  });
+
+  const recommendResponse = await fetch(`/api/recommend?${params.toString()}`);
+  if (recommendResponse.ok) {
+    const payload = (await recommendResponse.json()) as { songs?: UploadedSong[] };
+    const uploaded = (payload.songs ?? []).filter((song) => Number(song.id) > 0);
+    if (uploaded.length > 0) return uploaded.slice(0, 3).map(songToMusicTrack);
+  }
+
+  const musicResponse = await fetch("/api/music");
+  if (musicResponse.ok) {
+    const payload = (await musicResponse.json()) as { songs?: UploadedSong[]; tracks?: UploadedSong[] };
+    const uploaded = (payload.songs ?? payload.tracks ?? []).filter((song) => Number(song.id) > 0);
+    if (uploaded.length > 0) return uploaded.slice(0, 3).map(songToMusicTrack);
+  }
+
+  return analysis.recommendedMusic;
+}
+
 function MoodContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
@@ -143,16 +221,20 @@ function MoodContent() {
       }
 
       const result = (await response.json()) as MoodAnalysis;
-      const nextAnalysis = buildCounselingAnalysis({
+      const baseAnalysis = buildCounselingAnalysis({
         ...result,
         emotion: result.mood,
         comfort: result.message,
         tracks: result.recommendedMusic,
       }, text);
+      const uploadedMusic = await fetchUploadedRecommendations(baseAnalysis).catch(() => baseAnalysis.recommendedMusic);
+      const nextAnalysis = withRecommendedMusic(baseAnalysis, uploadedMusic);
       setAnalysis(nextAnalysis);
       sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: text.trim(), analysis: nextAnalysis }));
     } catch {
-      const nextAnalysis = buildCounselingAnalysis(analyzeMood(text), text);
+      const baseAnalysis = buildCounselingAnalysis(analyzeMood(text), text);
+      const uploadedMusic = await fetchUploadedRecommendations(baseAnalysis).catch(() => baseAnalysis.recommendedMusic);
+      const nextAnalysis = withRecommendedMusic(baseAnalysis, uploadedMusic);
       setAnalysis(nextAnalysis);
       sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: text.trim(), analysis: nextAnalysis }));
       setError("AI 분석 연결이 불안정해 기본 감정정리 결과를 표시했습니다.");

@@ -245,29 +245,29 @@ function calculateFortuneScore(counts: Record<ElementKey, number>, dominant: Ele
 
 function buildMovementAnalysis(result: SajuResult) {
   const dayBranch = result.day[1] || "?";
-  const peachBranchMap: Record<string, string> = {
-    신: "유",
-    자: "유",
-    진: "유",
-    인: "묘",
-    오: "묘",
-    술: "묘",
-    사: "오",
-    유: "오",
-    축: "오",
-    해: "자",
-    묘: "자",
-    미: "자",
+  const travelBranchMap: Record<string, string> = {
+    신: "인",
+    자: "인",
+    진: "인",
+    인: "신",
+    오: "신",
+    술: "신",
+    사: "해",
+    유: "해",
+    축: "해",
+    해: "사",
+    묘: "사",
+    미: "사",
   };
-  const peachBranch = peachBranchMap[dayBranch] ?? "묘";
+  const travelBranch = travelBranchMap[dayBranch] ?? "인";
   const pillars = [result.year, result.month, result.day, result.hour].join("");
-  const hasPeach = pillars.includes(peachBranch);
+  const hasTravel = pillars.includes(travelBranch);
 
-  if (hasPeach) {
-    return `일지 ${dayBranch} 기준 도화 기운은 ${peachBranch}로 보며, 원국 안에 해당 흐름이 보여 이동수와 대외 노출, 만남의 기회가 비교적 살아나는 편입니다. 새로운 장소, 모임, 콘텐츠 공개처럼 사람의 시선이 닿는 활동은 운을 열 수 있지만, 감정적 약속이나 충동적 결정은 속도를 늦추는 것이 좋습니다.`;
+  if (hasTravel) {
+    return `일지 ${dayBranch} 기준 역마 기운은 ${travelBranch}로 보며, 원국 안에 해당 흐름이 보여 이동수와 환경 변화에 대한 반응이 비교적 살아나는 편입니다. 출장, 이사, 여행, 부서 이동, 새로운 생활권 진입처럼 자리를 옮기며 기회가 열릴 수 있으니 준비 없는 충동 이동보다 목적이 분명한 이동이 좋습니다.`;
   }
 
-  return `일지 ${dayBranch} 기준 도화 기운은 ${peachBranch}로 보며, 원국 안에서는 강하게 드러나기보다 필요할 때 만들어 쓰는 흐름에 가깝습니다. 이동수는 갑작스러운 변화보다 계획된 외출, 일정한 네트워크 확장, 작은 환경 전환에서 안정적으로 살아납니다.`;
+  return `일지 ${dayBranch} 기준 역마 기운은 ${travelBranch}로 보며, 원국 안에서는 강하게 드러나기보다 필요할 때 만들어 쓰는 흐름에 가깝습니다. 이동수는 갑작스러운 변화보다 계획된 외출, 일정한 동선 확장, 업무나 생활 공간의 작은 전환에서 안정적으로 살아납니다.`;
 }
 
 function toPlayerTrack(track: MusicTrack): PlayerTrack {
@@ -321,7 +321,7 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
       { title: "직업운", body: profile.career },
       { title: "연애운", body: profile.love },
       { title: "건강운", body: profile.health },
-      { title: "이동수(도화살) 분석", body: buildMovementAnalysis(result) },
+      { title: "이동수(역마살) 분석", body: buildMovementAnalysis(result) },
       { title: "부족한 오행 분석", body: `${weak} 기운이 가장 약하게 나타납니다. ${weakAdvice.analysis}` },
       { title: "부족한 오행 보완 방법", body: weakAdvice.supplement },
       { title: "주의해야 할 행동", body: `${profile.caution} 선택지를 줄이고 실행 단위를 작게 나누는 것이 좋습니다.` },
