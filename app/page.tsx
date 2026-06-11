@@ -14,10 +14,6 @@ export default function Home() {
               나만의 플레이리스트를 만나보세요.
             </span>
           </h1>
-          <p className="mt-8 text-lg text-slate-300 sm:text-xl">
-            오늘 당신의 마음은 어떤가요?
-          </p>
-          
           <MainMoodInput />
         </div>
       </section>
