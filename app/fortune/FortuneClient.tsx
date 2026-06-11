@@ -330,32 +330,6 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
   };
 }
 
-function DonutChart({ counts }: { counts: Record<ElementKey, number> }) {
-  const total = Math.max(Object.values(counts).reduce((sum, value) => sum + value, 0), 1);
-  const stops = elements.reduce<{ cursor: number; values: string[] }>((acc, element) => {
-    const start = acc.cursor;
-    const end = start + (counts[element.key] / total) * 100;
-    return {
-      cursor: end,
-      values: [...acc.values, `${element.color} ${start}% ${end}%`],
-    };
-  }, { cursor: 0, values: [] }).values;
-
-  return (
-    <div className="flex items-center justify-center">
-      <div
-        className="relative h-[190px] w-[190px] rounded-full shadow-2xl shadow-black/30 md:h-40 md:w-40"
-        style={{ background: `conic-gradient(${stops.join(", ")})` }}
-      >
-        <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-[#0d1020] text-center md:inset-6">
-          <span className="text-xs font-bold text-slate-500">총 오행</span>
-          <span className="text-3xl font-black text-white">{total}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ElementBars({ counts }: { counts: Record<ElementKey, number> }) {
   const max = Math.max(...Object.values(counts), 1);
 
@@ -378,15 +352,6 @@ function ElementBars({ counts }: { counts: Record<ElementKey, number> }) {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function SummaryPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-      <p className="text-xs font-bold text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-black text-white">{value}</p>
     </div>
   );
 }
@@ -598,7 +563,7 @@ export function FortuneClient() {
                     <p className="text-base leading-7 text-slate-300">{report.todayFortune}</p>
                   </div>
                 </div>
-                <div className="mt-auto flex min-h-24 items-center justify-center text-center">
+                <div className="mt-auto flex min-h-16 items-center justify-center text-center">
                   <p className="text-4xl font-black tabular-nums text-white">{report.fortuneScore}/100점</p>
                 </div>
               </div>
@@ -626,13 +591,8 @@ export function FortuneClient() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-4 grid max-w-md gap-3 sm:grid-cols-2">
-                  <SummaryPill label="중심 오행" value={report.dominant} />
-                  <SummaryPill label="부족한 오행" value={report.weak} />
-                </div>
               </div>
-              <div className="mt-5 grid gap-5 md:mt-6 md:grid-cols-[0.8fr_1.2fr] md:items-center">
-                <DonutChart counts={report.counts} />
+              <div className="mt-5 md:mt-6">
                 <ElementBars counts={report.counts} />
               </div>
             </section>
