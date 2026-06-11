@@ -26,6 +26,7 @@ type StoredPlayerState = {
   isPlaying: boolean;
   volume: number;
   currentTime: number;
+  repeatQueue: boolean;
 };
 
 type MusicPlayerContextValue = {
@@ -37,6 +38,8 @@ type MusicPlayerContextValue = {
   duration: number;
   currentTime: number;
   canPlayCurrentTrack: boolean;
+  isPlaybackBlocked: boolean;
+  repeatQueue: boolean;
   playTrack: (track: PlayerTrack, queue?: PlayerTrack[], index?: number) => void;
   playQueue: (queue: PlayerTrack[], index?: number) => void;
   togglePlay: () => void;
@@ -44,6 +47,7 @@ type MusicPlayerContextValue = {
   playPrevious: () => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
+  toggleRepeatQueue: () => void;
 };
 
 const storageKey = "simsimplay.musicPlayer.v1";
@@ -90,6 +94,7 @@ function readStoredState(): StoredPlayerState | null {
       isPlaying: Boolean(parsed.isPlaying),
       volume: clamp(Number(parsed.volume) || 0.75, 0, 1),
       currentTime: Math.max(Number(parsed.currentTime) || 0, 0),
+      repeatQueue: parsed.repeatQueue !== false,
     };
   } catch {
     return null;
@@ -107,6 +112,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [isPlaybackBlocked, setIsPlaybackBlocked] = useState(false);
+  const [repeatQueue, setRepeatQueue] = useState(true);
 
   const currentTrack = queue[currentIndex] ?? null;
   const canPlayCurrentTrack = currentTrack ? isPlayableSrc(currentTrack.src) : false;
@@ -121,9 +128,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
       setQueue(stored.queue);
       setCurrentIndex(stored.currentIndex);
-      setIsPlaying(stored.isPlaying);
+      setIsPlaying(false);
       setVolumeValue(stored.volume);
       setCurrentTime(stored.currentTime);
+      setRepeatQueue(stored.repeatQueue);
       restoredTimeRef.current = stored.currentTime;
       restoredTrackIdRef.current = stored.queue[stored.currentIndex]?.id ?? null;
       setIsStorageReady(true);
@@ -152,9 +160,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }
 
     if (isPlaying) {
-      void audio.play().catch(() => {
-        setIsPlaying(false);
-      });
+      void audio.play()
+        .then(() => {
+          setIsPlaybackBlocked(false);
+        })
+        .catch(() => {
+          setIsPlaying(false);
+          setIsPlaybackBlocked(true);
+        });
     } else {
       audio.pause();
     }
@@ -169,10 +182,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       isPlaying,
       volume: volumeValue,
       currentTime,
+      repeatQueue,
     };
 
     window.localStorage.setItem(storageKey, JSON.stringify(state));
-  }, [currentIndex, currentTime, isPlaying, isStorageReady, queue, volumeValue]);
+  }, [currentIndex, currentTime, isPlaying, isStorageReady, queue, repeatQueue, volumeValue]);
 
   const playQueue = useCallback((nextQueue: PlayerTrack[], index = 0) => {
     if (nextQueue.length === 0) return;
@@ -183,6 +197,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setCurrentIndex(nextIndex);
     setCurrentTime(0);
     setDuration(0);
+    setIsPlaybackBlocked(false);
     setIsPlaying(isPlayableSrc(nextQueue[nextIndex].src));
   }, []);
 
@@ -198,6 +213,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setCurrentIndex(nextIndex);
     setCurrentTime(0);
     setDuration(0);
+    setIsPlaybackBlocked(false);
     setIsPlaying(isPlayableSrc(queue[nextIndex].src));
   }, [currentIndex, queue]);
 
@@ -216,11 +232,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setCurrentIndex(previousIndex);
     setCurrentTime(0);
     setDuration(0);
+    setIsPlaybackBlocked(false);
     setIsPlaying(isPlayableSrc(queue[previousIndex].src));
   }, [currentIndex, queue]);
 
   const togglePlay = useCallback(() => {
     if (!currentTrack || !canPlayCurrentTrack) return;
+    setIsPlaybackBlocked(false);
     setIsPlaying((value) => !value);
   }, [canPlayCurrentTrack, currentTrack]);
 
@@ -235,6 +253,30 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const setVolume = useCallback((nextVolume: number) => {
     setVolumeValue(clamp(nextVolume, 0, 1));
   }, []);
+
+  const toggleRepeatQueue = useCallback(() => {
+    setRepeatQueue((value) => !value);
+  }, []);
+
+  const handleEnded = useCallback(() => {
+    if (queue.length === 0) return;
+
+    if (currentIndex < queue.length - 1) {
+      playNext();
+      return;
+    }
+
+    if (repeatQueue) {
+      playNext();
+      return;
+    }
+
+    restoredTimeRef.current = 0;
+    restoredTrackIdRef.current = null;
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+  }, [currentIndex, playNext, queue.length, repeatQueue]);
 
   const handleLoadedMetadata = useCallback(() => {
     const audio = audioRef.current;
@@ -257,6 +299,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     duration,
     currentTime,
     canPlayCurrentTrack,
+    isPlaybackBlocked,
+    repeatQueue,
     playTrack,
     playQueue,
     togglePlay,
@@ -264,20 +308,24 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playPrevious,
     seek,
     setVolume,
+    toggleRepeatQueue,
   }), [
     canPlayCurrentTrack,
     currentIndex,
     currentTime,
     currentTrack,
     duration,
+    isPlaybackBlocked,
     isPlaying,
     playNext,
     playPrevious,
     playQueue,
     playTrack,
     queue,
+    repeatQueue,
     seek,
     setVolume,
+    toggleRepeatQueue,
     togglePlay,
     volumeValue,
   ]);
@@ -291,7 +339,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
-        onEnded={playNext}
+        onEnded={handleEnded}
       />
     </MusicPlayerContext.Provider>
   );
@@ -311,12 +359,14 @@ function ControlButton({
   onClick,
   children,
   primary = false,
+  attention = false,
 }: {
   label: string;
   disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
   primary?: boolean;
+  attention?: boolean;
 }) {
   return (
     <button
@@ -328,6 +378,7 @@ function ControlButton({
       className={[
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black transition",
         primary ? "bg-white text-slate-950 hover:bg-pink-100" : "border border-white/10 bg-white/[0.06] text-slate-200 hover:bg-white/10",
+        attention ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-[#0d1020]" : "",
         disabled ? "cursor-not-allowed opacity-40" : "",
       ].join(" ")}
     >
@@ -346,12 +397,15 @@ export function GlobalMiniPlayer() {
     duration,
     currentTime,
     canPlayCurrentTrack,
+    isPlaybackBlocked,
+    repeatQueue,
     togglePlay,
     playNext,
     playPrevious,
     playQueue,
     seek,
     setVolume,
+    toggleRepeatQueue,
   } = useMusicPlayer();
   const playerRef = useRef<HTMLElement | null>(null);
   const [isVolumeOpen, setIsVolumeOpen] = useState(false);
@@ -398,7 +452,7 @@ export function GlobalMiniPlayer() {
             <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
               <span aria-hidden="true">‹‹</span>
             </ControlButton>
-            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
+            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary attention={isPlaybackBlocked}>
               <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
             </ControlButton>
             <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
@@ -406,7 +460,7 @@ export function GlobalMiniPlayer() {
             </ControlButton>
           </div>
           <span className="md:hidden">
-            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
+            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary attention={isPlaybackBlocked}>
               <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
             </ControlButton>
           </span>
@@ -471,6 +525,17 @@ export function GlobalMiniPlayer() {
           <span aria-hidden="true" className={isQueueOpen ? "text-[10px] leading-none" : "rotate-180 text-[10px] leading-none"}>
             ▴
           </span>
+        </button>
+      </div>
+
+      <div className="mt-1 flex items-center justify-end text-[10px] text-slate-500 md:text-[11px]">
+        <button
+          type="button"
+          aria-pressed={repeatQueue}
+          onClick={toggleRepeatQueue}
+          className="rounded-md px-1.5 py-0.5 font-semibold transition hover:bg-white/[0.06] hover:text-slate-200"
+        >
+          {repeatQueue ? "3곡 후 반복" : "3곡 후 정지"}
         </button>
       </div>
 

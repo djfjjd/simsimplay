@@ -9,11 +9,12 @@ import {
   type DiaryEntry,
   type MoodAnalysis,
 } from "../lib/mood";
-import type { MusicTrack } from "../lib/music";
+import { recommendedTracks, type MusicTrack } from "../lib/music";
 import { useMusicPlayer, type PlayerTrack } from "../components/GlobalMusicPlayer";
 import { TodayFortuneMusic } from "../../src/components/TodayFortuneMusic";
 
 const lastAnalysisKey = "simsimplay_last_analysis";
+const autoplayRequestKey = "simsimplay.mood.autoplayRequest";
 const concernCandidates = ["진로", "돈", "가족", "인간관계", "건강", "수면", "자존감", "미래불안"];
 
 type UploadedSong = {
@@ -154,8 +155,9 @@ function songToMusicTrack(song: UploadedSong): MusicTrack {
 }
 
 function withRecommendedMusic(analysis: MoodAnalysis, recommendedMusic: MusicTrack[]): MoodAnalysis {
+  const normalizedMusic = normalizeRecommendedMusic(recommendedMusic);
   const musicReasons = Object.fromEntries(
-    recommendedMusic.map((track) => [
+    normalizedMusic.map((track) => [
       track.title,
       `${track.category} 분위기와 ${track.moodTags.slice(0, 2).join(", ")} 태그가 오늘 감정의 흐름에 맞아 추천합니다.`,
     ]),
@@ -163,10 +165,38 @@ function withRecommendedMusic(analysis: MoodAnalysis, recommendedMusic: MusicTra
 
   return {
     ...analysis,
-    recommendedMusic,
-    tracks: recommendedMusic,
+    recommendedMusic: normalizedMusic,
+    tracks: normalizedMusic,
     musicReasons,
   };
+}
+
+function normalizeRecommendedMusic(tracks: MusicTrack[]) {
+  const seen = new Set<string>();
+  const nextTracks = [...tracks, ...recommendedTracks].filter((track) => {
+    const key = track.title.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return nextTracks.slice(0, 3);
+}
+
+function shouldAutoplayMoodQueue(prompt: string) {
+  try {
+    const raw = sessionStorage.getItem(autoplayRequestKey);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw) as { prompt?: string; createdAt?: number };
+    sessionStorage.removeItem(autoplayRequestKey);
+
+    const isFresh = typeof parsed.createdAt === "number" && Date.now() - parsed.createdAt < 5 * 60 * 1000;
+    return isFresh && parsed.prompt?.trim() === prompt.trim();
+  } catch {
+    sessionStorage.removeItem(autoplayRequestKey);
+    return false;
+  }
 }
 
 async function fetchUploadedRecommendations(analysis: MoodAnalysis): Promise<MusicTrack[]> {
@@ -205,6 +235,9 @@ function MoodContent() {
   const [error, setError] = useState("");
 
   const handleAnalyze = useCallback(async (text: string) => {
+    const trimmedText = text.trim();
+    const shouldAutoplay = shouldAutoplayMoodQueue(trimmedText);
+
     setIsAnalyzing(true);
     setError("");
     setSaved(false);
@@ -213,7 +246,7 @@ function MoodContent() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: text.trim() }),
+        body: JSON.stringify({ content: trimmedText }),
       });
 
       if (!response.ok) {
@@ -230,18 +263,20 @@ function MoodContent() {
       const uploadedMusic = await fetchUploadedRecommendations(baseAnalysis).catch(() => baseAnalysis.recommendedMusic);
       const nextAnalysis = withRecommendedMusic(baseAnalysis, uploadedMusic);
       setAnalysis(nextAnalysis);
-      sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: text.trim(), analysis: nextAnalysis }));
+      sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: trimmedText, analysis: nextAnalysis }));
+      if (shouldAutoplay) playQueue(buildRecommendedQueue(nextAnalysis.recommendedMusic), 0);
     } catch {
       const baseAnalysis = buildCounselingAnalysis(analyzeMood(text), text);
       const uploadedMusic = await fetchUploadedRecommendations(baseAnalysis).catch(() => baseAnalysis.recommendedMusic);
       const nextAnalysis = withRecommendedMusic(baseAnalysis, uploadedMusic);
       setAnalysis(nextAnalysis);
-      sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: text.trim(), analysis: nextAnalysis }));
+      sessionStorage.setItem(lastAnalysisKey, JSON.stringify({ query: trimmedText, analysis: nextAnalysis }));
+      if (shouldAutoplay) playQueue(buildRecommendedQueue(nextAnalysis.recommendedMusic), 0);
       setError("AI 분석 연결이 불안정해 기본 감정정리 결과를 표시했습니다.");
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [playQueue]);
 
   useEffect(() => {
     if (query) {
@@ -295,7 +330,11 @@ function MoodContent() {
     };
   }
 
-  const recommendedQueue = analysis?.recommendedMusic.map(toPlayerTrack) ?? [];
+  function buildRecommendedQueue(tracks: MoodAnalysis["recommendedMusic"]): PlayerTrack[] {
+    return normalizeRecommendedMusic(tracks).map(toPlayerTrack);
+  }
+
+  const recommendedQueue = analysis ? buildRecommendedQueue(analysis.recommendedMusic) : [];
 
   return (
     <div className="grid gap-5 md:gap-8 xl:grid-cols-[1.2fr_0.8fr]">

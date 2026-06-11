@@ -9,10 +9,15 @@ export function MainMoodInput() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    const prompt = input.trim();
+    if (!prompt) return;
     
-    // Pass the input as a URL-encoded query parameter to the mood page
-    const encodedInput = encodeURIComponent(input.trim());
+    sessionStorage.setItem(
+      "simsimplay.mood.autoplayRequest",
+      JSON.stringify({ prompt, createdAt: Date.now() }),
+    );
+
+    const encodedInput = encodeURIComponent(prompt);
     router.push(`/mood?q=${encodedInput}`);
   };
 
