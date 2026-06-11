@@ -15,6 +15,13 @@ export type MoodAnalysis = {
   emotion: EmotionType | string;
   comfort: string;
   tracks: MusicTrack[];
+  summary?: string;
+  emotions?: Array<{ name: string; intensity: number }>;
+  concernTopics?: string[];
+  counselingReport?: Array<{ title: string; body: string }>;
+  thoughtPatterns?: string[];
+  recoveryRoutine?: string[];
+  musicReasons?: Record<string, string>;
 };
 
 export type DiaryEntry = {

@@ -22,6 +22,7 @@ type Report = {
   dominant: ElementKey;
   weak: ElementKey;
   summary: string;
+  todayFortune: string;
   daewoonDirection: DaewoonDirection;
   daewoon: DaewoonItem[];
   nextDaewoonGuide: string;
@@ -262,7 +263,8 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
     counts,
     dominant,
     weak,
-    summary: `${dominant} 기운이 중심을 잡고 ${weak} 기운을 보완할수록 삶의 균형이 좋아지는 사주입니다.`,
+    summary: `${dominant} 기운이 중심을 잡고 ${weak} 기운을 보완할수록 삶의 균형이 좋아지는 사주풀이입니다.`,
+    todayFortune: `오늘은 ${dominant} 기운이 비교적 강하고 ${weak} 기운이 부족하게 느껴질 수 있는 날입니다. ${dominant} 기운의 장점인 ${profile.strength.split(".")[0]} 흐름을 활용하되, ${weak} 기운을 보완하기 위해 ${weakAdvice.supplement} 급하게 결론을 내리기보다 작은 실행과 휴식을 함께 챙기면 운의 균형을 잡기 좋습니다.`,
     daewoonDirection,
     daewoon,
     nextDaewoonGuide: `향후 5년은 현재 대운의 후반 흐름과 다음 ${nextDaewoon.age}세 대운의 ${nextDaewoon.keywords.slice(0, 2).join(", ")} 기운으로 이어질 수 있습니다. 급한 확장보다 정리, 자산 관리, 생활 기반 구축에 집중하는 것이 좋습니다.`,
@@ -304,10 +306,10 @@ function DonutChart({ counts }: { counts: Record<ElementKey, number> }) {
   return (
     <div className="flex items-center justify-center">
       <div
-        className="relative h-36 w-36 rounded-full shadow-2xl shadow-black/30 sm:h-40 sm:w-40"
+        className="relative h-[190px] w-[190px] rounded-full shadow-2xl shadow-black/30 md:h-40 md:w-40"
         style={{ background: `conic-gradient(${stops.join(", ")})` }}
       >
-        <div className="absolute inset-6 flex flex-col items-center justify-center rounded-full bg-[#0d1020] text-center">
+        <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-[#0d1020] text-center md:inset-6">
           <span className="text-xs font-bold text-slate-500">총 오행</span>
           <span className="text-3xl font-black text-white">{total}</span>
         </div>
@@ -478,8 +480,8 @@ export function FortuneClient() {
   }
 
   return (
-    <div className="w-full max-w-6xl">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5 text-left shadow-xl shadow-black/20 backdrop-blur-sm sm:p-6">
+    <div className="w-full max-w-6xl pb-[calc(3rem+env(safe-area-inset-bottom))]">
+      <section className="mx-0 rounded-3xl border border-white/10 bg-white/5 p-4 text-left shadow-xl shadow-black/20 backdrop-blur-sm md:p-6">
         <form onSubmit={handleAnalyze} className="grid gap-4 lg:grid-cols-[1.1fr_0.8fr_1fr_auto] lg:items-end">
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-400">
@@ -546,28 +548,28 @@ export function FortuneClient() {
       </section>
 
       {report ? (
-        <div className="mt-8 space-y-8 text-left">
+        <div className="mt-6 space-y-5 text-left md:mt-8 md:space-y-8">
           <div className="grid gap-5 lg:grid-cols-[1fr_1fr] lg:items-stretch">
-            <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-5 shadow-xl shadow-black/20 sm:p-7">
+            <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-4 shadow-xl shadow-black/20 md:p-7">
               <div className="flex h-full flex-col justify-between gap-6">
                 <div>
-                  <p className="text-sm font-bold text-pink-200">상단 요약</p>
-                  <h2 className="mt-2 text-3xl font-black text-white">AI 사주 리포트 핵심</h2>
+                  <p className="text-sm font-bold text-pink-200">사주풀이</p>
+                  <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">AI 사주 리포트 핵심</h2>
                   <p className="mt-4 text-base leading-7 text-slate-300">{report.summary}</p>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <SummaryPill label="중심 오행" value={report.dominant} />
-                    <SummaryPill label="부족한 오행" value={report.weak} />
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-sm font-bold text-pink-100">오늘의 운세</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-300">{report.todayFortune}</p>
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="rounded-3xl border border-white/10 bg-black/20 p-4 md:p-5">
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-bold text-slate-400">사주 원국</p>
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
                       {report.gender} · {report.birthYear}
                     </span>
                   </div>
-                  <div className="mt-5 flex justify-center gap-3 sm:justify-start">
+                  <div className="mt-5 flex justify-center gap-3 md:justify-start">
                     {[
                       { label: "시주", val: report.result.hour },
                       { label: "일주", val: report.result.day },
@@ -587,15 +589,16 @@ export function FortuneClient() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-7">
+            <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 shadow-xl shadow-black/20 md:p-7">
               <div>
                 <p className="text-sm font-bold text-pink-200">오행 비율</p>
                 <h2 className="mt-2 text-2xl font-black text-white">기운의 균형</h2>
-                <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
-                  도넛은 전체 비율, 막대는 각 오행의 상대 강도를 짧게 보여줍니다.
-                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <SummaryPill label="중심 오행" value={report.dominant} />
+                  <SummaryPill label="부족한 오행" value={report.weak} />
+                </div>
               </div>
-              <div className="mt-6 grid gap-5 md:grid-cols-[0.8fr_1.2fr] md:items-center">
+              <div className="mt-5 grid gap-5 md:mt-6 md:grid-cols-[0.8fr_1.2fr] md:items-center">
                 <DonutChart counts={report.counts} />
                 <ElementBars counts={report.counts} />
               </div>

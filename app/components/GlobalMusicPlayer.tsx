@@ -384,28 +384,35 @@ export function GlobalMiniPlayer() {
     <section
       ref={playerRef}
       aria-label="전역 음악 플레이어"
-      className="relative w-full max-w-[42rem] rounded-xl border border-white/10 bg-[#0d1020]/95 px-3 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl"
+      className="relative mx-auto w-[calc(100vw-32px)] max-w-[420px] rounded-xl border border-white/10 bg-[#0d1020]/95 px-2.5 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl md:w-full md:max-w-[42rem] md:px-3"
     >
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-        <div className="min-w-0 text-center sm:text-left">
-          <p className="truncate text-sm font-bold leading-4 text-white">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="min-w-0 text-left">
+          <p className="truncate text-xs font-bold leading-4 text-white md:text-sm">
             {currentTrack?.title ?? "재생할 음악을 선택해주세요"}
           </p>
         </div>
 
-        <div className="flex items-center justify-center gap-2">
-          <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
-            <span aria-hidden="true">‹‹</span>
-          </ControlButton>
-          <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
-            <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
-          </ControlButton>
-          <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
-            <span aria-hidden="true">››</span>
-          </ControlButton>
+        <div className="flex items-center justify-center">
+          <div className="hidden items-center justify-center gap-2 md:flex">
+            <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
+              <span aria-hidden="true">‹‹</span>
+            </ControlButton>
+            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
+              <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
+            </ControlButton>
+            <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
+              <span aria-hidden="true">››</span>
+            </ControlButton>
+          </div>
+          <span className="md:hidden">
+            <ControlButton label={isPlaying ? "일시정지" : "재생"} disabled={!canPlayCurrentTrack} onClick={togglePlay} primary>
+              <span aria-hidden="true">{isPlaying ? "II" : "▶"}</span>
+            </ControlButton>
+          </span>
         </div>
 
-        <div className="relative flex justify-center sm:justify-end">
+        <div className="relative hidden justify-center md:flex md:justify-end">
           <button
             type="button"
             aria-label="볼륨 조절 열기"
@@ -439,8 +446,8 @@ export function GlobalMiniPlayer() {
         </div>
       </div>
 
-      <div className="mt-1.5 grid grid-cols-[5.5rem_minmax(0,1fr)_4.25rem] items-center gap-2 text-[11px] tabular-nums text-slate-400">
-        <span className="whitespace-nowrap">{formatTime(progressValue)} / {totalTimeLabel}</span>
+      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_3.25rem] items-center gap-2 text-[10px] tabular-nums text-slate-400 md:mt-1.5 md:grid-cols-[5.5rem_minmax(0,1fr)_4.25rem] md:text-[11px]">
+        <span className="hidden whitespace-nowrap md:inline">{formatTime(progressValue)} / {totalTimeLabel}</span>
         <input
           type="range"
           min="0"
@@ -465,6 +472,45 @@ export function GlobalMiniPlayer() {
             ▴
           </span>
         </button>
+      </div>
+
+      <div className="mt-1 flex items-center justify-center gap-1.5 md:hidden">
+        <ControlButton label="이전곡" disabled={queue.length === 0} onClick={playPrevious}>
+          <span aria-hidden="true">‹‹</span>
+        </ControlButton>
+        <ControlButton label="다음곡" disabled={queue.length === 0} onClick={playNext}>
+          <span aria-hidden="true">››</span>
+        </ControlButton>
+        <button
+          type="button"
+          aria-label="볼륨 조절 열기"
+          aria-expanded={isVolumeOpen}
+          title="볼륨"
+          onClick={() => setIsVolumeOpen((value) => !value)}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+        >
+          <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.8v7.6a4 4 0 0 0 0-7.6Zm0-3.2v2.1a6 6 0 0 1 0 9.8V19a8 8 0 0 0 0-14Z" />
+          </svg>
+        </button>
+
+        {isVolumeOpen ? (
+          <div className="absolute right-2 top-[calc(100%+0.5rem)] z-20 w-36 rounded-xl border border-white/10 bg-[#111426] p-3 shadow-xl shadow-black/30">
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-400">
+              <span className="tabular-nums">{Math.round(volume * 100)}</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(event) => setVolume(Number(event.target.value))}
+                className="h-1 w-full accent-pink-400"
+                aria-label="볼륨"
+              />
+            </label>
+          </div>
+        ) : null}
       </div>
 
       {isQueueOpen ? (
