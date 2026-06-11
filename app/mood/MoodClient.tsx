@@ -309,34 +309,6 @@ function MoodContent() {
               </div>
             </div>
 
-            <div className="mt-8 md:mt-10">
-              <p className="mb-5 text-lg font-bold text-white flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-                추천 힐링음악
-              </p>
-              <div className="grid gap-3">
-                {analysis.recommendedMusic.map((track, index) => (
-                  <button
-                    type="button"
-                    key={track.title}
-                    onClick={() => playQueue(recommendedQueue, index)}
-                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-left transition hover:border-white/10 hover:bg-white/10 md:p-5"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-bold text-white group-hover:text-pink-300 transition">{track.title}</p>
-                      <p className="mt-1 text-sm text-slate-400">{track.description}</p>
-                      <p className="mt-2 text-xs leading-5 text-slate-500">{analysis.musicReasons?.[track.title]}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-pink-500/20 transition">
-                      <svg className="w-5 h-5 text-slate-300 group-hover:text-pink-300" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="mt-6 rounded-2xl border border-white/5 bg-white/[0.03] p-4">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-500">추천 플레이리스트</p>
               <p className="mt-2 text-lg font-black text-white">{analysis.playlist}</p>
@@ -379,6 +351,35 @@ function MoodContent() {
       <aside className="space-y-6">
         <div className="sticky top-24">
           <TodayFortuneMusic />
+          {analysis ? (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
+              <p className="mb-5 flex items-center gap-2 text-lg font-bold text-white">
+                <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />
+                추천 힐링음악
+              </p>
+              <div className="grid gap-3">
+                {analysis.recommendedMusic.map((track, index) => (
+                  <button
+                    type="button"
+                    key={track.title}
+                    onClick={() => playQueue(recommendedQueue, index)}
+                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/[0.06] p-4 text-left transition hover:border-white/10 hover:bg-white/10"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-bold text-white transition group-hover:text-pink-300">{track.title}</p>
+                      <p className="mt-1 text-sm text-slate-400">{track.description}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{analysis.musicReasons?.[track.title]}</p>
+                    </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/5 transition group-hover:bg-pink-500/20">
+                      <svg className="h-5 w-5 text-slate-300 group-hover:text-pink-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-6 rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/5 to-pink-500/5 p-6">
             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Guide</h3>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">

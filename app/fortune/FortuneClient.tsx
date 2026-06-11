@@ -23,6 +23,7 @@ type Report = {
   weak: ElementKey;
   summary: string;
   todayFortune: string;
+  fortuneScore: number;
   daewoonDirection: DaewoonDirection;
   daewoon: DaewoonItem[];
   nextDaewoonGuide: string;
@@ -235,6 +236,40 @@ function tracksForCategory(category: string) {
   return (matches.length > 0 ? matches : recommendedTracks).slice(0, 3);
 }
 
+function calculateFortuneScore(counts: Record<ElementKey, number>, dominant: ElementKey, weak: ElementKey) {
+  const values = Object.values(counts);
+  const spread = Math.max(...values) - Math.min(...values);
+  const base = 82 - spread * 5 + Math.min(counts[dominant], 3) * 2 - (counts[weak] === 0 ? 6 : 0);
+  return Math.max(55, Math.min(96, Math.round(base)));
+}
+
+function buildMovementAnalysis(result: SajuResult) {
+  const dayBranch = result.day[1] || "?";
+  const peachBranchMap: Record<string, string> = {
+    신: "유",
+    자: "유",
+    진: "유",
+    인: "묘",
+    오: "묘",
+    술: "묘",
+    사: "오",
+    유: "오",
+    축: "오",
+    해: "자",
+    묘: "자",
+    미: "자",
+  };
+  const peachBranch = peachBranchMap[dayBranch] ?? "묘";
+  const pillars = [result.year, result.month, result.day, result.hour].join("");
+  const hasPeach = pillars.includes(peachBranch);
+
+  if (hasPeach) {
+    return `일지 ${dayBranch} 기준 도화 기운은 ${peachBranch}로 보며, 원국 안에 해당 흐름이 보여 이동수와 대외 노출, 만남의 기회가 비교적 살아나는 편입니다. 새로운 장소, 모임, 콘텐츠 공개처럼 사람의 시선이 닿는 활동은 운을 열 수 있지만, 감정적 약속이나 충동적 결정은 속도를 늦추는 것이 좋습니다.`;
+  }
+
+  return `일지 ${dayBranch} 기준 도화 기운은 ${peachBranch}로 보며, 원국 안에서는 강하게 드러나기보다 필요할 때 만들어 쓰는 흐름에 가깝습니다. 이동수는 갑작스러운 변화보다 계획된 외출, 일정한 네트워크 확장, 작은 환경 전환에서 안정적으로 살아납니다.`;
+}
+
 function toPlayerTrack(track: MusicTrack): PlayerTrack {
   return {
     id: `fortune-report-${track.title}`,
@@ -255,6 +290,7 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
   const daewoon = calculateDaewoonTimeline(result, gender, birthYear);
   const daewoonDirection = getDaewoonDirection(gender, birthYear);
   const nextDaewoon = daewoon[1] ?? daewoon[0];
+  const fortuneScore = calculateFortuneScore(counts, dominant, weak);
 
   return {
     result,
@@ -264,7 +300,8 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
     dominant,
     weak,
     summary: `${dominant} 기운이 중심을 잡고 ${weak} 기운을 보완할수록 삶의 균형이 좋아지는 사주풀이입니다.`,
-    todayFortune: `오늘은 ${dominant} 기운이 비교적 강하고 ${weak} 기운이 부족하게 느껴질 수 있는 날입니다. ${dominant} 기운의 장점인 ${profile.strength.split(".")[0]} 흐름을 활용하되, ${weak} 기운을 보완하기 위해 ${weakAdvice.supplement} 급하게 결론을 내리기보다 작은 실행과 휴식을 함께 챙기면 운의 균형을 잡기 좋습니다.`,
+    todayFortune: `오늘 총운은 100점 만점 중 ${fortuneScore}점입니다. 오늘은 ${dominant} 기운이 비교적 강하고 ${weak} 기운이 부족하게 느껴질 수 있는 날입니다. ${dominant} 기운의 장점인 ${profile.strength.split(".")[0]} 흐름을 활용하되, ${weak} 기운을 보완하기 위해 ${weakAdvice.supplement} 급하게 결론을 내리기보다 작은 실행과 휴식을 함께 챙기면 운의 균형을 잡기 좋습니다.`,
+    fortuneScore,
     daewoonDirection,
     daewoon,
     nextDaewoonGuide: `향후 5년은 현재 대운의 후반 흐름과 다음 ${nextDaewoon.age}세 대운의 ${nextDaewoon.keywords.slice(0, 2).join(", ")} 기운으로 이어질 수 있습니다. 급한 확장보다 정리, 자산 관리, 생활 기반 구축에 집중하는 것이 좋습니다.`,
@@ -284,6 +321,7 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
       { title: "직업운", body: profile.career },
       { title: "연애운", body: profile.love },
       { title: "건강운", body: profile.health },
+      { title: "이동수(도화살) 분석", body: buildMovementAnalysis(result) },
       { title: "부족한 오행 분석", body: `${weak} 기운이 가장 약하게 나타납니다. ${weakAdvice.analysis}` },
       { title: "부족한 오행 보완 방법", body: weakAdvice.supplement },
       { title: "주의해야 할 행동", body: `${profile.caution} 선택지를 줄이고 실행 단위를 작게 나누는 것이 좋습니다.` },
@@ -568,12 +606,7 @@ export function FortuneClient() {
                 <p className="text-sm font-bold text-pink-200">오행 비율</p>
                 <h2 className="mt-2 text-2xl font-black text-white">사주원국</h2>
                 <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4 md:p-5">
-                  <div className="flex items-center justify-end">
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                      {report.gender} · {report.birthYear}
-                    </span>
-                  </div>
-                  <div className="mt-5 flex justify-center gap-3 md:justify-start">
+                  <div className="flex justify-center gap-3 md:justify-start">
                     {[
                       { label: "시주", val: report.result.hour },
                       { label: "일주", val: report.result.day },
@@ -590,7 +623,7 @@ export function FortuneClient() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid max-w-md gap-3 sm:grid-cols-2">
                   <SummaryPill label="중심 오행" value={report.dominant} />
                   <SummaryPill label="부족한 오행" value={report.weak} />
                 </div>
