@@ -324,8 +324,8 @@ function MoodContent() {
                 disabled={saved}
                 className={`w-full rounded-2xl py-5 font-bold transition-all ${
                   saved 
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default" 
-                  : "bg-white/5 text-white border border-white/10 hover:bg-white/10 active:scale-[0.98]"
+                  ? "cursor-default border border-emerald-400/30 bg-emerald-500/15 text-emerald-200" 
+                  : "border border-pink-200/30 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 text-white shadow-lg shadow-pink-950/30 hover:brightness-110 active:scale-[0.98]"
                 }`}
               >
                 {saved ? "감정일기에 저장되었습니다" : "감정일기에 저장하기"}
