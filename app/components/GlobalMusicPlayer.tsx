@@ -398,14 +398,12 @@ export function GlobalMiniPlayer() {
     currentTime,
     canPlayCurrentTrack,
     isPlaybackBlocked,
-    repeatQueue,
     togglePlay,
     playNext,
     playPrevious,
     playQueue,
     seek,
     setVolume,
-    toggleRepeatQueue,
   } = useMusicPlayer();
   const playerRef = useRef<HTMLElement | null>(null);
   const [isVolumeOpen, setIsVolumeOpen] = useState(false);
@@ -500,7 +498,7 @@ export function GlobalMiniPlayer() {
         </div>
       </div>
 
-      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_3.25rem] items-center gap-2 text-[10px] tabular-nums text-slate-400 md:mt-1.5 md:grid-cols-[5.5rem_minmax(0,1fr)_4.25rem] md:text-[11px]">
+      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-2 text-[10px] tabular-nums text-slate-400 md:mt-1.5 md:grid-cols-[5.5rem_minmax(0,1fr)_4.25rem] md:text-[11px]">
         <span className="hidden whitespace-nowrap md:inline">{formatTime(progressValue)} / {totalTimeLabel}</span>
         <input
           type="range"
@@ -519,23 +517,12 @@ export function GlobalMiniPlayer() {
           aria-expanded={isQueueOpen}
           disabled={queue.length === 0}
           onClick={() => setIsQueueOpen((value) => !value)}
-          className="flex items-center justify-end gap-1 rounded-md px-1 py-0.5 text-right text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center justify-center gap-1 rounded-md border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-center font-bold text-slate-300 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span>{queueLabel}</span>
           <span aria-hidden="true" className={isQueueOpen ? "text-[10px] leading-none" : "rotate-180 text-[10px] leading-none"}>
             ▴
           </span>
-        </button>
-      </div>
-
-      <div className="mt-1 flex items-center justify-end text-[10px] text-slate-500 md:text-[11px]">
-        <button
-          type="button"
-          aria-pressed={repeatQueue}
-          onClick={toggleRepeatQueue}
-          className="rounded-md px-1.5 py-0.5 font-semibold transition hover:bg-white/[0.06] hover:text-slate-200"
-        >
-          {repeatQueue ? "3곡 후 반복" : "3곡 후 정지"}
         </button>
       </div>
 

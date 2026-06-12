@@ -9,13 +9,14 @@ import {
   type DaewoonItem,
   type DaewoonDirection,
 } from "../../src/lib/daewoon";
-import { calculateSaju, getFiveElements, type SajuResult } from "../../src/lib/ganji";
+import { calculateSaju, getFiveElements, getTodayGanji, type GanjiInfo, type SajuResult } from "../../src/lib/ganji";
 
 type Gender = "여성" | "남성";
 type ElementKey = "목" | "화" | "토" | "금" | "수";
 
 type Report = {
   result: SajuResult;
+  todayGanji: GanjiInfo;
   gender: Gender;
   birthYear: number;
   counts: Record<ElementKey, number>;
@@ -24,6 +25,8 @@ type Report = {
   summary: string;
   todayFortune: string;
   fortuneScore: number;
+  scoreMessage: DailySajuScoreMessage;
+  dailyRoutine: string[];
   daewoonDirection: DaewoonDirection;
   daewoon: DaewoonItem[];
   nextDaewoonGuide: string;
@@ -32,6 +35,13 @@ type Report = {
   tracks: MusicTrack[];
   timeline: Array<{ title: string; body: string }>;
   adviceSections: Array<{ title: string; body: string }>;
+};
+
+type DailySajuScoreMessage = {
+  grade: string;
+  title: string;
+  description: string;
+  advice: string;
 };
 
 const hours = [
@@ -236,11 +246,189 @@ function tracksForCategory(category: string) {
   return (matches.length > 0 ? matches : recommendedTracks).slice(0, 3);
 }
 
-function calculateFortuneScore(counts: Record<ElementKey, number>, dominant: ElementKey, weak: ElementKey) {
+const dailyRoutineByElement: Record<ElementKey, string[]> = {
+  목: ["아침에 10분 산책하기", "초록색 환경을 가까이하기", "새로운 배움 하나 시작하기", "아침 루틴을 한 가지 정하기"],
+  화: ["햇빛을 10분 이상 보기", "가벼운 운동으로 몸 데우기", "마음을 짧게 표현하기", "따뜻한 음식 챙기기"],
+  토: ["식사 시간을 고정하기", "집 안 한 곳만 정리하기", "오늘 쓸 예산표 적기", "반복할 루틴 하나 만들기"],
+  금: ["책상 위를 정리하기", "오늘 할 일 3개만 적기", "작은 결정을 미루지 않기", "기록 습관 5분 지키기"],
+  수: ["수면 시간을 먼저 정하기", "물 한 잔 자주 마시기", "5분 명상하기", "감정일기 세 줄 쓰기"],
+};
+
+const productiveElement: Record<ElementKey, ElementKey> = {
+  목: "화",
+  화: "토",
+  토: "금",
+  금: "수",
+  수: "목",
+};
+
+const controllingElement: Record<ElementKey, ElementKey> = {
+  목: "토",
+  토: "수",
+  수: "화",
+  화: "금",
+  금: "목",
+};
+
+function getElementKeysByCount(counts: Record<ElementKey, number>, predicate: (count: number) => boolean) {
+  return elements.map((element) => element.key).filter((key) => predicate(counts[key]));
+}
+
+function buildTodayElementCounts(todayGanji: GanjiInfo) {
+  const counts: Record<ElementKey, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+  addElement(counts, todayGanji.dayGanji);
+  return counts;
+}
+
+function getSpread(counts: Record<ElementKey, number>) {
   const values = Object.values(counts);
-  const spread = Math.max(...values) - Math.min(...values);
-  const base = 82 - spread * 5 + Math.min(counts[dominant], 3) * 2 - (counts[weak] === 0 ? 6 : 0);
-  return Math.max(55, Math.min(96, Math.round(base)));
+  return Math.max(...values) - Math.min(...values);
+}
+
+function clampScore(score: number) {
+  return Math.max(40, Math.min(95, Math.round(score)));
+}
+
+export function calculateDailySajuScore(sajuResult: SajuResult, todayGanji: GanjiInfo) {
+  const counts = buildElementCounts(sajuResult);
+  const todayCounts = buildTodayElementCounts(todayGanji);
+  const weakElements = getElementKeysByCount(counts, (count) => count <= 1);
+  const strongElements = getElementKeysByCount(counts, (count) => count >= 3);
+  const dayMaster = normalizeElement(getFiveElements(sajuResult.day[0] ?? ""));
+
+  let score = 64;
+  let complementedCount = 0;
+
+  weakElements.forEach((element) => {
+    if (todayCounts[element] > 0) {
+      score += 10;
+      complementedCount += 1;
+    }
+  });
+
+  if (complementedCount >= 2) score += 5;
+
+  strongElements.forEach((element) => {
+    if (todayCounts[element] >= 2) score -= 5;
+  });
+
+  elements.forEach(({ key }) => {
+    if (todayCounts[key] === 0) return;
+    if (productiveElement[dayMaster] === key || productiveElement[key] === dayMaster) score += 4;
+    if (controllingElement[dayMaster] === key || controllingElement[key] === dayMaster) score -= 3;
+  });
+
+  const balancedCounts = { ...counts };
+  elements.forEach(({ key }) => {
+    balancedCounts[key] += todayCounts[key];
+  });
+
+  const originalSpread = getSpread(counts);
+  const balancedSpread = getSpread(balancedCounts);
+  if (balancedSpread < originalSpread) score += 8;
+  if (balancedSpread > originalSpread + 1) score -= 4;
+
+  return clampScore(score);
+}
+
+export function getDailySajuScoreMessage(score: number): DailySajuScoreMessage {
+  if (score >= 90) {
+    return {
+      grade: "90점대",
+      title: "적극적으로 흐름을 타기 좋은 날",
+      description: "오늘은 기운의 흐름이 매우 잘 맞아 실행력과 표현력이 살아나기 쉬운 날입니다.",
+      advice: "미뤄둔 결정이나 중요한 실행을 현실적인 범위 안에서 진행해도 좋습니다.",
+    };
+  }
+
+  if (score >= 80) {
+    return {
+      grade: "80점대",
+      title: "계획을 추진하기 좋은 날",
+      description: "전체적으로 좋은 흐름이 들어와 계획했던 일을 밀고 나가기 유리합니다.",
+      advice: "속도를 내되 무리한 확장보다 이미 준비한 일의 완성도를 높이세요.",
+    };
+  }
+
+  if (score >= 70) {
+    return {
+      grade: "70점대",
+      title: "루틴과 관계 정리에 좋은 날",
+      description: "무난하게 안정적인 흐름이라 큰 부담 없이 작은 실행을 이어가기 좋습니다.",
+      advice: "평소 루틴을 유지하고 가까운 관계나 일정을 차분히 정리해보세요.",
+    };
+  }
+
+  if (score >= 60) {
+    return {
+      grade: "60점대",
+      title: "정리와 점검이 필요한 날",
+      description: "오늘은 큰 확장보다 현재 상태를 정리하고 균형을 맞추는 데 유리한 흐름입니다.",
+      advice: "무리한 결정보다는 작은 루틴을 지키는 것이 좋습니다.",
+    };
+  }
+
+  if (score >= 50) {
+    return {
+      grade: "50점대",
+      title: "기복을 조심해야 하는 날",
+      description: "기운이 다소 불안정해 감정 기복이나 피로가 평소보다 크게 느껴질 수 있습니다.",
+      advice: "충동적인 판단을 피하고 몸의 피로 신호를 먼저 확인하세요.",
+    };
+  }
+
+  return {
+    grade: "40점대",
+    title: "쉬어가며 회복에 집중할 날",
+    description: "오늘은 무리한 확장보다 정리와 휴식이 필요한 흐름입니다.",
+    advice: "중요한 결정은 가능하면 미루고 수면, 식사, 공간 정리부터 챙기세요.",
+  };
+}
+
+export function getDailySajuRoutine(sajuResult: SajuResult, todayGanji: GanjiInfo) {
+  const counts = buildElementCounts(sajuResult);
+  const todayCounts = buildTodayElementCounts(todayGanji);
+  const weakElements = getElementKeysByCount(counts, (count) => count <= 1);
+  const todayWeakElements = getElementKeysByCount(todayCounts, (count) => count === 0);
+  const complementedElements = weakElements.filter((element) => todayCounts[element] > 0);
+  const priority = [
+    ...complementedElements,
+    ...weakElements.filter((element) => todayWeakElements.includes(element)),
+    ...weakElements,
+    pickWeak(counts),
+  ];
+
+  const routines = priority.flatMap((element) => dailyRoutineByElement[element]);
+  return Array.from(new Set(routines)).slice(0, 4);
+}
+
+function buildDailyFortuneText(
+  sajuResult: SajuResult,
+  todayGanji: GanjiInfo,
+  counts: Record<ElementKey, number>,
+  dominant: ElementKey,
+  weak: ElementKey,
+  scoreMessage: DailySajuScoreMessage,
+) {
+  const todayCounts = buildTodayElementCounts(todayGanji);
+  const todayStrong = pickDominant(todayCounts);
+  const weakElements = getElementKeysByCount(counts, (count) => count <= 1);
+  const strongElements = getElementKeysByCount(counts, (count) => count >= 3);
+  const complemented = weakElements.filter((element) => todayCounts[element] > 0);
+  const dayMaster = normalizeElement(getFiveElements(sajuResult.day[0] ?? ""));
+  const complementedText = complemented.length > 0
+    ? `${complemented.join(", ")} 기운이 보완됩니다`
+    : `${weak} 기운은 직접 루틴으로 보완하는 편이 좋습니다`;
+
+  return [
+    `오늘은 ${todayGanji.dayGanji}일로 ${todayStrong} 기운이 비교적 선명하게 작용합니다.`,
+    `원국에서는 ${dominant} 기운이 강하고 ${weak} 기운이 약하게 나타나며, 일간의 중심은 ${dayMaster} 기운으로 볼 수 있습니다.`,
+    `오늘 일진이 들어오면 ${complementedText}.`,
+    strongElements.includes(todayStrong)
+      ? `다만 이미 강한 ${todayStrong} 기운이 다시 커질 수 있어 속도보다 균형을 의식하는 것이 좋습니다.`
+      : `부족한 지점을 작은 행동으로 채우면 하루의 체감 흐름이 더 안정됩니다.`,
+    `${scoreMessage.description} ${scoreMessage.advice}`,
+  ].join(" ");
 }
 
 function buildMovementAnalysis(result: SajuResult) {
@@ -281,6 +469,7 @@ function toPlayerTrack(track: MusicTrack): PlayerTrack {
 }
 
 function buildReport(result: SajuResult, gender: Gender, birthYear: number): Report {
+  const todayGanji = getTodayGanji();
   const counts = buildElementCounts(result);
   const dominant = pickDominant(counts);
   const weak = pickWeak(counts);
@@ -290,18 +479,23 @@ function buildReport(result: SajuResult, gender: Gender, birthYear: number): Rep
   const daewoon = calculateDaewoonTimeline(result, gender, birthYear);
   const daewoonDirection = getDaewoonDirection(gender, birthYear);
   const nextDaewoon = daewoon[1] ?? daewoon[0];
-  const fortuneScore = calculateFortuneScore(counts, dominant, weak);
+  const fortuneScore = calculateDailySajuScore(result, todayGanji);
+  const scoreMessage = getDailySajuScoreMessage(fortuneScore);
+  const dailyRoutine = getDailySajuRoutine(result, todayGanji);
 
   return {
     result,
+    todayGanji,
     gender,
     birthYear,
     counts,
     dominant,
     weak,
     summary: `${dominant} 기운이 중심을 잡고 ${weak} 기운을 보완할수록 삶의 균형이 좋아지는 사주풀이입니다.`,
-    todayFortune: `오늘 총운은 100점 만점 중 ${fortuneScore}점입니다. 오늘은 ${dominant} 기운이 비교적 강하고 ${weak} 기운이 부족하게 느껴질 수 있는 날입니다. ${dominant} 기운의 장점인 ${profile.strength.split(".")[0]} 흐름을 활용하되, ${weak} 기운을 보완하기 위해 ${weakAdvice.supplement} 급하게 결론을 내리기보다 작은 실행과 휴식을 함께 챙기면 운의 균형을 잡기 좋습니다.`,
+    todayFortune: buildDailyFortuneText(result, todayGanji, counts, dominant, weak, scoreMessage),
     fortuneScore,
+    scoreMessage,
+    dailyRoutine,
     daewoonDirection,
     daewoon,
     nextDaewoonGuide: `향후 5년은 현재 대운의 후반 흐름과 다음 ${nextDaewoon.age}세 대운의 ${nextDaewoon.keywords.slice(0, 2).join(", ")} 기운으로 이어질 수 있습니다. 급한 확장보다 정리, 자산 관리, 생활 기반 구축에 집중하는 것이 좋습니다.`,
@@ -560,11 +754,21 @@ export function FortuneClient() {
                   <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">오늘의 운세</h2>
                   <p className="mt-4 text-base leading-7 text-slate-300">{report.summary}</p>
                   <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-slate-200">
+                        {report.todayGanji.dateText}
+                      </span>
+                      <span className="rounded-full bg-pink-300/10 px-3 py-1 text-xs font-black text-pink-100">
+                        {report.todayGanji.dayGanji}일
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-white">{report.scoreMessage.title}</h3>
                     <p className="text-base leading-7 text-slate-300">{report.todayFortune}</p>
                   </div>
                 </div>
-                <div className="mt-auto flex min-h-16 items-center justify-center text-center">
+                <div className="mt-auto flex min-h-16 flex-col items-center justify-center text-center">
                   <p className="text-4xl font-black tabular-nums text-white">{report.fortuneScore}/100점</p>
+                  <p className="mt-1 text-sm font-bold text-pink-100">{report.scoreMessage.grade}</p>
                 </div>
               </div>
             </section>
@@ -597,6 +801,32 @@ export function FortuneClient() {
               </div>
             </section>
           </div>
+
+          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-pink-200">오늘의 회복 루틴</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{report.scoreMessage.title}</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                  사주 원국의 부족 오행과 오늘 {report.todayGanji.dayGanji}일의 기운을 함께 반영했습니다.
+                </p>
+              </div>
+              <span className="rounded-full border border-white/10 bg-black/25 px-4 py-2 text-xs font-black text-slate-200">
+                {report.scoreMessage.grade}
+              </span>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {report.dailyRoutine.map((routine, index) => (
+                <div key={routine} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <span className="text-xs font-black tabular-nums text-pink-200">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p className="mt-2 text-sm font-bold leading-6 text-white">{routine}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-400">{report.scoreMessage.advice}</p>
+          </section>
 
           <LifeTimeline items={report.timeline} />
 
