@@ -109,6 +109,7 @@ export function PsychologyClient() {
   const currentQuestion = questions[currentIndex];
   const canStart = profile.birthYear && profile.birthMonth && profile.birthDay && profile.birthHour && profile.gender;
   const canGoNext = currentQuestion ? Boolean(answers[currentQuestion.id]) : false;
+  const scaleOptions = [...answerOptions].sort((left, right) => left.value - right.value);
 
   function updateProfile(field: keyof PsychologyProfile, value: string) {
     setProfile((prev) => ({ ...prev, [field]: value }));
@@ -142,59 +143,78 @@ export function PsychologyClient() {
   if (step === "questions" && currentQuestion) {
     return (
       <section className="w-full max-w-3xl text-left">
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-          <div className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
-            <span>진행률 {progress}%</span>
-            <span>
+        <article className="rounded-3xl border border-white/10 bg-[#101425] p-5 shadow-2xl shadow-black/25 sm:p-8">
+          <div className="flex items-center justify-between gap-3 text-sm font-black text-sky-200">
+            <span className="tabular-nums">{String(currentIndex + 1).padStart(4, "0")} ▶</span>
+            <span className="text-slate-300">
               현재 문항: {currentIndex + 1} / {questions.length}
             </span>
           </div>
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/30">
-            <div className="h-full rounded-full bg-gradient-to-r from-sky-300 to-pink-300" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
 
-        <article className="rounded-3xl border border-white/10 bg-[#101425] p-5 shadow-2xl shadow-black/25 sm:p-8">
-          <p className="text-sm font-bold text-sky-200">
-            널리 쓰이는 심리 선별 문항 구조를 참고한 마음상태 체크
-          </p>
-          <h2 className="mt-4 text-2xl font-black leading-snug text-white sm:text-3xl">
+          <div className="my-4 h-px bg-white/10" />
+
+          <h2 className="text-2xl font-black leading-snug text-white sm:text-3xl">
             {currentQuestion.text}
           </h2>
-          <div className="mt-7 grid gap-3">
-            {answerOptions.map((option) => {
-              const active = answers[currentQuestion.id] === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => selectAnswer(option.value)}
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-left text-base font-bold transition ${
-                    active
-                      ? "border-pink-300 bg-pink-300 text-slate-950"
-                      : "border-white/10 bg-white/[0.04] text-slate-100 hover:border-white/25 hover:bg-white/[0.08]"
-                  }`}
-                >
-                  <span>{option.label}</span>
-                  <span className="tabular-nums">{option.value}</span>
-                </button>
-              );
-            })}
+
+          <div className="mt-7">
+            <div className="mb-4 flex items-center justify-between text-xs font-bold text-slate-300 sm:text-sm">
+              <span>전혀 아니다</span>
+              <span>매우 그렇다</span>
+            </div>
+
+            <div className="relative px-1">
+              <div className="absolute left-5 right-5 top-5 h-px bg-white/20" aria-hidden="true" />
+              <div className="relative grid grid-cols-5 gap-0">
+                {scaleOptions.map((option) => {
+                  const active = answers[currentQuestion.id] === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => selectAnswer(option.value)}
+                      aria-label={option.label}
+                      aria-pressed={active}
+                      className="flex flex-col items-center gap-3 text-center"
+                    >
+                      <span
+                        className={`grid size-10 place-items-center rounded-full border-2 text-sm font-black transition ${
+                          active
+                            ? "border-pink-300 bg-pink-300 text-slate-950 shadow-lg shadow-pink-300/20"
+                            : "border-white/30 bg-[#101425] text-transparent hover:border-white/60"
+                        }`}
+                      >
+                        {active ? option.value : ""}
+                      </span>
+                      <span className={`text-sm font-black tabular-nums ${active ? "text-pink-200" : "text-slate-400"}`}>
+                        {option.value}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div className="mt-8 flex items-center justify-between gap-3">
+
+          <div className="my-6 h-px bg-white/10" />
+
+          <div className="grid grid-cols-[minmax(4.5rem,1fr)_auto_minmax(4.5rem,1fr)] items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentIndex((index) => Math.max(index - 1, 0))}
               disabled={currentIndex === 0}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="justify-self-start rounded-full border border-white/10 px-4 py-3 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5"
             >
               이전
             </button>
+            <span className="text-center text-xs font-black text-slate-300 sm:text-sm">
+              진행률 {progress}%
+            </span>
             <button
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="rounded-full bg-white px-6 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+              className="justify-self-end rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40 sm:px-6"
             >
               {currentIndex === questions.length - 1 ? "결과 분석하기" : "다음"}
             </button>
