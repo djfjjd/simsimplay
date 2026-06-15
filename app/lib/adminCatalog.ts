@@ -39,3 +39,16 @@ export type Playlist = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type BlogPost = {
+  id: number;
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  content: string;
+  tags: string[];
+  status: "draft" | "published";
+  createdAt: string;
+  updatedAt: string;
+};

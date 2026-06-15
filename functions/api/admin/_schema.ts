@@ -115,6 +115,20 @@ export async function ensureAdminSchema(db: D1Database) {
         FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
       )
     `),
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        content TEXT NOT NULL,
+        tags TEXT NOT NULL DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'draft',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
   ]);
 
   // Ensure columns exist (for local dev where ensureAdminSchema runs repeatedly)
@@ -123,6 +137,10 @@ export async function ensureAdminSchema(db: D1Database) {
   } catch {}
   try {
     await db.prepare("ALTER TABLE songs ADD COLUMN time_tags TEXT NOT NULL DEFAULT '[]'").run();
+  } catch {}
+  try {
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_posts_status_created ON posts(status, created_at)").run();
   } catch {}
 
   await db.batch(
@@ -188,6 +206,34 @@ export type PlaylistRow = {
   created_at: string;
   updated_at: string;
 };
+
+export type PostRow = {
+  id: number;
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  content: string;
+  tags: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export function mapPost(row: PostRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    category: row.category,
+    description: row.description,
+    content: row.content,
+    tags: parseJsonArray(row.tags),
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export function parseJsonArray(value: string | null | undefined): string[] {
   if (!value) return [];
