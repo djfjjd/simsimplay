@@ -4,17 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BlogPost } from "../../lib/adminCatalog";
 
+function getCurrentSlug(fallback: string) {
+  if (typeof window === "undefined") return fallback;
+  return decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() || fallback);
+}
+
 export default function PostDetailClient({ slug }: { slug: string }) {
-  const [resolvedSlug, setResolvedSlug] = useState(slug);
+  const [resolvedSlug, setResolvedSlug] = useState(() => getCurrentSlug(slug));
   const [post, setPost] = useState<BlogPost | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const pathSlug = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() || "");
+    const pathSlug = getCurrentSlug(slug);
     if (pathSlug && pathSlug !== resolvedSlug) {
       setResolvedSlug(pathSlug);
     }
-  }, [resolvedSlug]);
+  }, [resolvedSlug, slug]);
 
   useEffect(() => {
     async function fetchPost() {

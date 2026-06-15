@@ -13,6 +13,7 @@ export default function BlogClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("전체");
   const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -38,10 +39,30 @@ export default function BlogClient() {
     });
   }, [posts, selectedCategory, searchTerm]);
 
+  const visiblePosts = useMemo(() => filteredPosts.slice(0, pageSize), [filteredPosts, pageSize]);
+
   return (
     <div className="space-y-8">
       {/* Filters & Search */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-400">
+            총 <span className="font-bold text-white">{filteredPosts.length}</span>개의 글
+          </p>
+          <label className="flex items-center gap-3 text-sm text-slate-400">
+            <span>보기</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-white outline-none focus:ring-2 focus:ring-violet-500/50"
+            >
+              <option value={20}>20개씩 보기</option>
+              <option value={50}>50개씩 보기</option>
+              <option value={100}>100개씩 보기</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map(cat => (
             <button
@@ -67,39 +88,45 @@ export default function BlogClient() {
           />
           <svg className="absolute right-4 top-3.5 h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
+        </div>
       </div>
 
       {/* Post List */}
       {isLoading ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-64 animate-pulse rounded-3xl bg-white/5" />
+            <div key={i} className="p-5">
+              <div className="mb-3 h-4 w-24 animate-pulse rounded bg-white/5" />
+              <div className="mb-3 h-6 w-3/4 animate-pulse rounded bg-white/5" />
+              <div className="h-4 w-full animate-pulse rounded bg-white/5" />
+            </div>
           ))}
         </div>
       ) : filteredPosts.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPosts.map(post => (
+        <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
+          {visiblePosts.map(post => (
             <Link 
               key={post.id} 
               href={`/blog/${post.slug}`}
-              className="group flex flex-col rounded-3xl border border-white/10 bg-white/5 p-6 transition hover:bg-white/[0.08] hover:shadow-2xl hover:shadow-violet-900/10"
+              className="group block p-5 transition hover:bg-white/[0.06] md:p-6"
             >
-              <div className="mb-4">
-                <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-400">
-                  {post.category}
-                </span>
-              </div>
-              <h3 className="mb-3 text-xl font-bold text-white group-hover:text-violet-400 transition line-clamp-2">
-                {post.title}
-              </h3>
-              <p className="mb-6 flex-1 text-sm leading-relaxed text-slate-400 line-clamp-3">
-                {post.description}
-              </p>
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                <span className="flex items-center gap-1 group-hover:text-white transition">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span className="rounded-full bg-violet-500/10 px-2.5 py-1 font-bold text-violet-400">
+                      {post.category}
+                    </span>
+                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <h3 className="mb-2 text-lg font-bold leading-snug text-white transition group-hover:text-violet-300 md:text-xl">
+                    {post.title}
+                  </h3>
+                  <p className="line-clamp-2 text-sm leading-relaxed text-slate-400 md:text-base">
+                    {post.description}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-medium text-slate-500 transition group-hover:text-white">
                   자세히 보기
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                 </span>
               </div>
             </Link>
