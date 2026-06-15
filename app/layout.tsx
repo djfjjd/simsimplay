@@ -36,12 +36,13 @@ export default function RootLayout({
               <div className="order-3 w-full justify-self-center lg:order-none">
                 <GlobalMiniPlayer />
               </div>
-              <div className="flex items-center justify-center gap-5 text-xs font-medium md:gap-6 md:text-sm lg:justify-self-end">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-medium md:gap-x-5 md:text-sm lg:justify-self-end">
                 {[
-                  ["운세", "/fortune"],
+                  ["심리테스트", "/psychology"],
+                  ["사주풀이", "/fortune"],
                   ["음악", "/music"],
-                  ["일기", "/diary"],
-                  ["소개", "/about"],
+                  ["일기장", "/diary"],
+                  ["꿈해몽풀이", "/blog"],
                 ].map(([label, href]) => (
                   <Link
                     key={href}
