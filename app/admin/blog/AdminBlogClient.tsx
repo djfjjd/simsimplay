@@ -23,6 +23,8 @@ export default function AdminBlogClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [form, setForm] = useState<Partial<BlogPost>>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [message, setMessage] = useState("");
 
   // Filters
@@ -40,6 +42,7 @@ export default function AdminBlogClient() {
       const res = await fetch("/api/admin/posts");
       const data = (await res.json()) as { posts: BlogPost[] };
       setPosts(data.posts || []);
+      setSelectedIds([]);
     } catch (error) {
       console.error("Failed to fetch posts:", error);
     } finally {
@@ -95,14 +98,76 @@ export default function AdminBlogClient() {
     }
   }
 
+  async function handlePublish(ids?: number[]) {
+    const isSelectedPublish = Array.isArray(ids);
+    if (isSelectedPublish && ids.length === 0) {
+      setMessage("발행할 글을 선택해 주세요.");
+      return;
+    }
+
+    const confirmMessage = isSelectedPublish
+      ? `선택한 draft 글 ${ids.length}개를 발행하시겠습니까?`
+      : "모든 draft 글을 발행하시겠습니까?";
+
+    if (!confirm(confirmMessage)) return;
+
+    setIsPublishing(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/admin/posts/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isSelectedPublish ? { ids } : {})
+      });
+      const data = (await res.json()) as { count?: number; error?: string };
+      if (res.ok) {
+        setMessage(`${data.count || 0}개의 글이 발행되었습니다.`);
+        fetchPosts();
+      } else {
+        setMessage(data.error || "발행에 실패했습니다.");
+      }
+    } catch (error) {
+      setMessage("발행 중 오류가 발생했습니다.");
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
   function handleEdit(post: BlogPost) {
     setForm(post);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function toggleSelected(id: number) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]);
+  }
+
+  function toggleAllFilteredDrafts() {
+    const draftIds = filteredPosts.filter(post => post.status === "draft").map(post => post.id);
+    const allSelected = draftIds.length > 0 && draftIds.every(id => selectedIds.includes(id));
+    setSelectedIds(allSelected ? selectedIds.filter(id => !draftIds.includes(id)) : Array.from(new Set([...selectedIds, ...draftIds])));
+  }
+
   return (
     <div className="space-y-12 pb-20">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => handlePublish()}
+          disabled={isPublishing}
+          className="rounded-xl bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-500 disabled:opacity-50"
+        >
+          {isPublishing ? "발행 중..." : "전체 발행"}
+        </button>
+        <button
+          type="button"
+          onClick={() => handlePublish(selectedIds)}
+          disabled={isPublishing || selectedIds.length === 0}
+          className="rounded-xl bg-cyan-600 px-6 py-3 font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+        >
+          선택 발행
+        </button>
         <Link 
           href="/admin/blog/bulk"
           className="rounded-xl bg-violet-600 px-6 py-3 font-bold text-white hover:bg-violet-500 transition"
@@ -130,10 +195,9 @@ export default function AdminBlogClient() {
             <div>
               <label className="block text-sm font-bold text-slate-400 mb-2">슬러그 (Slug)</label>
               <input
-                required
                 value={form.slug}
                 onChange={e => setForm({ ...form, slug: e.target.value })}
-                placeholder="예: police-arrest-dream"
+                placeholder="비워두면 제목으로 자동 생성"
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-violet-500/50"
               />
             </div>
@@ -247,6 +311,15 @@ export default function AdminBlogClient() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/10 text-slate-400 text-sm">
+                <th className="pb-4 pl-2">
+                  <input
+                    type="checkbox"
+                    checked={filteredPosts.some(post => post.status === "draft") && filteredPosts.filter(post => post.status === "draft").every(post => selectedIds.includes(post.id))}
+                    onChange={toggleAllFilteredDrafts}
+                    aria-label="현재 목록 draft 전체 선택"
+                    className="h-4 w-4 rounded border-white/20 bg-black/30"
+                  />
+                </th>
                 <th className="pb-4 pl-2">제목</th>
                 <th className="pb-4">카테고리</th>
                 <th className="pb-4">상태</th>
@@ -256,9 +329,19 @@ export default function AdminBlogClient() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
-                <tr><td colSpan={5} className="py-10 text-center text-slate-500">불러오는 중...</td></tr>
+                <tr><td colSpan={6} className="py-10 text-center text-slate-500">불러오는 중...</td></tr>
               ) : filteredPosts.map(post => (
                 <tr key={post.id} className="hover:bg-white/[0.02]">
+                  <td className="py-4 pl-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(post.id)}
+                      onChange={() => toggleSelected(post.id)}
+                      disabled={post.status !== "draft"}
+                      aria-label={`${post.title} 선택`}
+                      className="h-4 w-4 rounded border-white/20 bg-black/30 disabled:opacity-30"
+                    />
+                  </td>
                   <td className="py-4 pl-2 font-bold text-white">{post.title}</td>
                   <td className="py-4 text-sm text-slate-400">{post.category}</td>
                   <td className="py-4">

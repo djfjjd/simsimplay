@@ -1,4 +1,4 @@
-import { ensureAdminSchema } from "../_schema";
+import { ensureAdminSchema, ensureUniquePostSlug } from "../_schema";
 
 interface Env {
   DB: D1Database;
@@ -7,17 +7,6 @@ interface Env {
 const BLOG_CATEGORIES = [
   "꿈해몽", "심리테스트", "심리상담", "운세", "사주오행", "수면", "불안", "우울", "집중", "음악치유"
 ];
-
-function generateSlug(title: string): string {
-  // Simple slug generation: Use a prefix and a random string if transliteration is complex
-  // For simplicity and safety with Korean, we'll use a prefix based on category + random suffix
-  // But the user requested something like police-arrest-dream-meaning
-  // Since I don't have a full transliterator here, I'll use a hash of the title for uniqueness
-  const hash = Math.random().toString(36).substring(2, 7);
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
-  return `post-${dateStr}-${hash}`;
-}
 
 function getCategoryFromTitle(title: string): string {
   if (title.includes("꿈") || title.includes("해몽")) return "꿈해몽";
@@ -148,10 +137,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const { titles } = await request.json() as { titles: string[] };
+  const { titles, status = "draft" } = await request.json() as { titles: string[]; status?: string };
 
   if (!titles || !Array.isArray(titles)) {
     return Response.json({ error: "제목 목록이 필요합니다." }, { status: 400 });
+  }
+
+  if (!["draft", "published"].includes(status)) {
+    return Response.json({ error: "생성 상태가 올바르지 않습니다." }, { status: 400 });
   }
 
   const results = [];
@@ -160,21 +153,22 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     const category = getCategoryFromTitle(title);
     const content = generateContent(title, category);
-    const slug = generateSlug(title);
+    const slug = await ensureUniquePostSlug(db, title);
     const description = `${title}에 대한 풀이와 심리적인 의미를 알아봅니다. SimSimPlay와 함께 마음을 돌보세요.`.slice(0, 140);
     const tags = [category, "심리", "마음건강"];
 
     try {
       await db.prepare(`
         INSERT INTO posts (title, slug, category, description, content, tags, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'draft')
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).bind(
         title.trim(),
         slug,
         category,
         description,
         content,
-        JSON.stringify(tags)
+        JSON.stringify(tags),
+        status
       ).run();
       results.push({ title, status: "success", slug });
     } catch (e: any) {

@@ -5,7 +5,8 @@ import PostDetailClient from "./PostDetailClient";
 // we normally would need a separate way to get metadata for SEO if we wanted full SSR.
 // But for now, I'll implement a basic shell.
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await params;
   // In a real CF Pages environment, we'd need to fetch from D1 here.
   // For simplicity in this environment, I'll use a placeholder or 
   // assume the client will handle most things, but Next.js metadata is better.
@@ -17,6 +18,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export async function generateStaticParams() {
   return [
+    { slug: "__post__" },
     { slug: "dream-police-arrest-1" },
     { slug: "dream-police-investigation-1" },
     { slug: "dream-debt-collector-1" },
@@ -30,14 +32,16 @@ export async function generateStaticParams() {
   ];
 }
 
-export default function PostDetailPage({ params }: { params: { slug: string } }) {
+export default async function PostDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+
   return (
     <PageShell
       eyebrow="Blog Post"
       title="상세 내용"
       description="나의 마음을 들여다보는 깊은 통찰"
     >
-      <PostDetailClient slug={params.slug} />
+      <PostDetailClient slug={slug} />
     </PageShell>
   );
 }

@@ -8,6 +8,7 @@ export default function BulkUploadClient() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"draft" | "published">("draft");
 
   async function handleGenerate() {
     const titles = text.split("\n").map(t => t.trim()).filter(Boolean);
@@ -24,7 +25,7 @@ export default function BulkUploadClient() {
       const res = await fetch("/api/admin/posts/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titles })
+        body: JSON.stringify({ titles, status })
       });
       const data = (await res.json()) as { results?: any[]; error?: string };
       if (res.ok) {
@@ -53,6 +54,18 @@ export default function BulkUploadClient() {
           placeholder="경찰에게 잡혀가는 꿈 해몽&#10;윗니가 전부 빠지는 꿈 해몽&#10;불안할 때 대처하는 법"
           className="w-full min-h-[300px] rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:ring-2 focus:ring-violet-500/50"
         />
+
+        <div className="mt-6 max-w-xs">
+          <label className="block text-sm font-bold text-slate-400 mb-2">생성 상태</label>
+          <select
+            value={status}
+            onChange={e => setStatus(e.target.value as "draft" | "published")}
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+          >
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
         
         <div className="mt-6 flex items-center gap-4">
           <button

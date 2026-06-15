@@ -143,6 +143,10 @@ export async function ensureAdminSchema(db: D1Database) {
     await db.prepare("CREATE INDEX IF NOT EXISTS idx_posts_status_created ON posts(status, created_at)").run();
   } catch {}
 
+  try {
+    await normalizeExistingPostSlugs(db);
+  } catch {}
+
   await db.batch(
     defaultCategories.map((name) =>
       db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").bind(name),
@@ -233,6 +237,66 @@ export function mapPost(row: PostRow) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+export function createSlugBase(input: string, fallback = "post") {
+  const slug = input
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90)
+    .replace(/-+$/g, "");
+
+  return slug || fallback;
+}
+
+export async function ensureUniquePostSlug(db: D1Database, input: string, currentId?: number | string | null) {
+  const base = createSlugBase(input, currentId ? `post-${currentId}` : "post");
+  let slug = base;
+  let suffix = 2;
+
+  while (true) {
+    const existing = currentId
+      ? await db.prepare("SELECT id FROM posts WHERE slug = ? AND id != ? LIMIT 1").bind(slug, currentId).first<{ id: number }>()
+      : await db.prepare("SELECT id FROM posts WHERE slug = ? LIMIT 1").bind(slug).first<{ id: number }>();
+
+    if (!existing) return slug;
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export async function normalizeExistingPostSlugs(db: D1Database) {
+  const { results } = await db.prepare("SELECT id, title, slug FROM posts ORDER BY id ASC").all<Pick<PostRow, "id" | "title" | "slug">>();
+  const reserved = new Set((results || []).map((row) => (row.slug || "").trim()).filter(Boolean));
+  const used = new Set<string>();
+
+  for (const row of results || []) {
+    const currentSlug = (row.slug || "").trim();
+    let nextSlug = currentSlug;
+
+    if (!nextSlug || used.has(nextSlug)) {
+      const base = createSlugBase(row.title, `post-${row.id}`);
+      nextSlug = base;
+      let suffix = 2;
+
+      while (used.has(nextSlug) || reserved.has(nextSlug)) {
+        nextSlug = `${base}-${suffix}`;
+        suffix += 1;
+      }
+    }
+
+    used.add(nextSlug);
+
+    if (row.slug !== nextSlug) {
+      await db
+        .prepare("UPDATE posts SET slug = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(nextSlug, row.id)
+        .run();
+    }
+  }
 }
 
 export function parseJsonArray(value: string | null | undefined): string[] {

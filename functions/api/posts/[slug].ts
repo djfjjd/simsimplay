@@ -7,7 +7,7 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
   const db = env.DB;
-  const slug = params.slug as string;
+  const slug = decodeURIComponent(params.slug as string);
 
   const post = await db.prepare("SELECT * FROM posts WHERE slug = ? AND status = 'published'").bind(slug).first<PostRow>();
   

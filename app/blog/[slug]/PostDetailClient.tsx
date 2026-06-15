@@ -5,13 +5,29 @@ import Link from "next/link";
 import { BlogPost } from "../../lib/adminCatalog";
 
 export default function PostDetailClient({ slug }: { slug: string }) {
+  const [resolvedSlug, setResolvedSlug] = useState(slug);
   const [post, setPost] = useState<BlogPost | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const pathSlug = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() || "");
+    if (pathSlug && pathSlug !== resolvedSlug) {
+      setResolvedSlug(pathSlug);
+    }
+  }, [resolvedSlug]);
+
+  useEffect(() => {
     async function fetchPost() {
+      if (!resolvedSlug || resolvedSlug === "__post__") {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setPost(null);
+
       try {
-        const res = await fetch(`/api/posts/${slug}`);
+        const res = await fetch(`/api/posts/${encodeURIComponent(resolvedSlug)}`);
         const data = (await res.json()) as { post?: BlogPost };
         if (data.post) {
           setPost(data.post);
@@ -23,7 +39,7 @@ export default function PostDetailClient({ slug }: { slug: string }) {
       }
     }
     fetchPost();
-  }, [slug]);
+  }, [resolvedSlug]);
 
   if (isLoading) {
     return (
