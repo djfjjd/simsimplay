@@ -39,8 +39,20 @@ type CombinedStoredResult = {
 
 type FullReport = {
   mentalState: string;
-  emotions: string[];
+  emotionalPattern: string;
   thoughtPattern: string;
+  stressCause: string;
+  anxietyCause: string;
+  energyState: string;
+  selfEsteemAnalysis: string;
+  relationshipAnalysis: string;
+  socialityAnalysis: string;
+  careerAnalysis: string;
+  burnoutRisk: string;
+  recoveryNeed: string;
+  avoidActions: string[];
+  oneMonthTips: string;
+  threeMonthTips: string;
   cautions: string[];
   recommendedActions: string[];
   journalQuestions: string[];
@@ -236,22 +248,65 @@ function getPreviewReport(result: CombinedStoredResult) {
   ];
 }
 
+function scoreTone(score: number, caution: boolean) {
+  if (caution) {
+    if (score >= 81) return "매우 강하게 올라온 신호";
+    if (score >= 61) return "분명하게 관리가 필요한 신호";
+    if (score >= 41) return "평균 범위 안에서 흔들리는 신호";
+    return "현재는 비교적 낮게 나타난 신호";
+  }
+  if (score >= 81) return "매우 선명한 강점";
+  if (score >= 61) return "잘 활용할 수 있는 강점";
+  if (score >= 41) return "상황에 따라 달라지는 보통 수준의 자원";
+  return "지금은 의식적으로 보완하면 좋은 자원";
+}
+
+function topKeys(scores: Record<PsychologyScoreKey, number>, keys: PsychologyScoreKey[], count: number) {
+  return [...keys].sort((a, b) => scores[b] - scores[a]).slice(0, count);
+}
+
 function getFullReport(result: CombinedStoredResult): FullReport {
   const scores = result.psychology.scores;
   const highestSignal = result.psychology.dominantSignals[0];
   const strongest = result.psychology.strengths[0];
+  const secondStrength = result.psychology.strengths[1];
+  const highCautions = topKeys(scores, cautionKeys, 3);
+  const highStrengths = topKeys(scores, strengthKeys, 4);
   const dominantProfile = elementMessages[result.dominantElement];
   const weakProfile = elementMessages[result.weakElement];
-  const tracks = recommendedTracks.slice(0, 3);
+  const tracks = recommendedTracks.slice(0, 5);
+  const stressTone = scoreTone(scores.stress, true);
+  const anxietyTone = scoreTone(scores.anxiety, true);
+  const lowMoodTone = scoreTone(scores.lowMood, true);
+  const esteemTone = scoreTone(scores.selfEsteem, false);
+  const socialTone = scoreTone(scores.sociality, false);
+  const relationshipTone = scoreTone(scores.relationship, false);
+  const careerTone = scoreTone(scores.career, false);
+  const mainSignalText = highCautions.map((key) => scoreLabels[key]).join(", ");
+  const strengthText = highStrengths.map((key) => scoreLabels[key]).join(", ");
 
   return {
-    mentalState: `${scoreLabels[highestSignal]} 항목이 가장 선명하게 나타났습니다. 이는 최근 마음의 에너지가 한 방향으로 몰려 있거나 회복 루틴이 필요하다는 신호로 참고해볼 수 있습니다.`,
-    emotions: [
-      scores.stress >= 61 ? "압박감" : "정리 욕구",
-      scores.anxiety >= 61 ? "긴장감" : "차분함",
-      scores.lowMood >= 61 ? "무거움" : "회복감",
+    mentalState: `현재 마음 상태는 ${scoreLabels[highestSignal]} 신호를 중심으로 읽을 수 있습니다. ${mainSignalText} 순서로 에너지가 많이 쓰이고 있으며, 이는 단순히 기분이 좋고 나쁨의 문제가 아니라 최근 생활 리듬, 관계 부담, 해야 할 일의 압박이 마음속에서 동시에 처리되고 있을 가능성을 보여줍니다. 지금은 더 밀어붙이는 방식보다 마음이 어디에서 오래 멈춰 있는지 확인하는 과정이 필요합니다.`,
+    emotionalPattern: `감정 패턴은 긴장과 회복 욕구가 함께 나타나는 형태입니다. 스트레스는 ${stressTone}, 불안은 ${anxietyTone}, 우울 관련 마음 신호는 ${lowMoodTone}로 정리됩니다. 감정이 한 번 올라오면 바로 사라지기보다 생각으로 이어지고, 생각이 다시 몸의 피로감이나 집중 저하로 연결될 가능성이 있습니다. 따라서 감정을 없애려 하기보다 이름을 붙이고, 오늘 처리할 감정과 내일로 넘겨도 되는 감정을 구분하는 방식이 잘 맞습니다.`,
+    thoughtPattern: `사고 패턴에서는 ${scoreLabels[strongest]}와 ${scoreLabels[secondStrength]} 자원이 핵심입니다. 강점은 ${strengthText} 쪽에 있으며, 이는 스스로를 회복시키는 기준이 될 수 있습니다. 다만 부담 신호가 높을 때는 장점이 오히려 '더 잘해야 한다', '내가 정리해야 한다'는 압박으로 바뀔 수 있습니다. 완벽한 결론을 내기 전까지 움직이지 못하는 패턴이 있다면, 결론보다 작은 실행을 먼저 두는 편이 안정적입니다.`,
+    stressCause: `스트레스 원인은 해야 할 일의 양 자체보다, 책임을 정리하는 방식에서 생길 가능성이 있습니다. 여러 요구가 동시에 들어올 때 우선순위를 세우기 전에 마음이 먼저 반응하고, 작은 변수도 전체 일정이 무너지는 느낌으로 확대될 수 있습니다. 특히 휴식 중에도 해야 할 일을 떠올리는 패턴이 있다면 실제 업무 시간보다 심리적 대기 시간이 길어져 피로가 누적되기 쉽습니다.`,
+    anxietyCause: `불안 원인은 미래의 불확실성을 미리 계산하려는 마음과 연결됩니다. 아직 일어나지 않은 상황을 대비하려는 능력은 장점이지만, 지금은 대비가 반복 확인과 걱정으로 넘어갈 가능성이 있습니다. 오늘 해결할 수 없는 문제를 계속 붙잡으면 몸은 계속 경계 상태에 머물 수 있으므로, 확인 가능한 사실과 추측을 분리하는 습관이 필요합니다.`,
+    energyState: `에너지 상태는 회복 잔량을 먼저 살펴야 하는 구간입니다. 집중력, 수면 리듬, 감정 반응 속도가 평소보다 예민하다면 의지 부족이 아니라 사용 가능한 에너지가 얇아진 상태로 볼 수 있습니다. 오늘은 생산성을 크게 끌어올리기보다 에너지가 새는 지점을 줄이는 것이 더 현실적입니다.`,
+    selfEsteemAnalysis: `자존감은 ${esteemTone}으로 나타납니다. 점수가 높다면 자신을 다시 세우는 언어가 어느 정도 살아 있다는 뜻이고, 낮다면 최근의 피로가 자기평가까지 흔들었을 가능성이 있습니다. 중요한 것은 지금의 점수를 성격의 고정값으로 보지 않는 것입니다. 자존감은 결과보다 반복되는 자기 대화의 영향을 크게 받으므로, 오늘 한 일을 작게라도 인정하는 기록이 도움이 됩니다.`,
+    relationshipAnalysis: `대인관계 성향은 ${relationshipTone}입니다. 관계에서 상대의 반응을 세심하게 읽는 힘이 있지만, 그만큼 내가 원하는 거리와 속도를 말하기 전에 상대에게 맞추는 흐름이 생길 수 있습니다. 가까운 관계일수록 설명하지 않은 기대가 쌓이면 서운함으로 바뀔 수 있으니, 큰 대화보다 짧고 명확한 표현을 늘리는 것이 좋습니다.`,
+    socialityAnalysis: `사회성은 ${socialTone}으로 볼 수 있습니다. 사람들과 함께할 때 얻는 자극과 소모되는 에너지가 동시에 존재할 가능성이 있습니다. 활발함 자체보다 상황을 읽고 역할을 찾는 능력이 중요하게 나타나며, 모임이나 협업 뒤에는 회복 시간을 일정에 포함해야 사회적 에너지가 안정적으로 유지됩니다.`,
+    careerAnalysis: `직업 성향은 ${careerTone}입니다. 지금은 성과를 내고 싶은 마음과 안정적인 구조를 원하는 마음이 함께 보입니다. 업무나 진로에서는 큰 목표를 선언하는 것보다, 기준을 세우고 우선순위를 좁히는 방식이 잘 맞습니다. ${scoreLabels[strongest]} 강점을 살리되, 모든 일을 혼자 책임지는 구조는 피하는 것이 좋습니다.`,
+    burnoutRisk: `번아웃 위험도는 스트레스 ${scores.stress}점, 우울 관련 마음 신호 ${scores.lowMood}점, 불안 ${scores.anxiety}점을 함께 보아 판단할 수 있습니다. 세 항목 중 두 개 이상이 높다면 현재는 몰입을 늘리는 시기보다 회복 시간을 공식 일정으로 잡아야 하는 시기입니다. 즐거운 일마저 의무처럼 느껴진다면 즉시 할 일의 총량을 줄여야 합니다.`,
+    recoveryNeed: `현재 가장 필요한 회복 요소는 ${result.weakElement} 기운을 보완하는 루틴과 심리적으로는 '정리된 하루'의 감각입니다. ${weakProfile.useful} 이 방향은 사주 해석과 심리 결과를 연결했을 때도 무리한 확장보다 반복 가능한 생활 회복에 더 가깝습니다.`,
+    avoidActions: [
+      "피곤한 상태에서 큰 결정을 바로 내리기",
+      "감정이 올라온 직후 중요한 메시지를 길게 보내기",
+      "휴식 시간을 죄책감으로 채우기",
+      "모든 문제를 혼자 정리하려고 하기",
+      "잠을 줄여서 부족한 시간을 메우기",
     ],
-    thoughtPattern: `${scoreLabels[strongest]} 항목은 상대적으로 강점으로 볼 수 있습니다. 다만 부담 신호가 높을 때는 강점을 증명하려는 방향보다 회복에 쓰는 방향이 더 안정적일 가능성이 있습니다.`,
+    oneMonthTips: "앞으로 1개월은 회복 루틴을 새로 만드는 기간으로 보는 것이 좋습니다. 수면 시간, 식사 시간, 하루 할 일 3개 제한을 먼저 고정하고, 감정 기록은 길게 쓰기보다 세 줄만 반복하세요. 관계나 일에서 불편함이 생기면 바로 결론을 내리지 말고 사실, 감정, 요청을 나누어 적어보는 방식이 도움이 됩니다.",
+    threeMonthTips: "앞으로 3개월은 생활 기반을 정리한 뒤 방향을 다시 선택하는 흐름이 잘 맞습니다. 첫 달에는 회복, 둘째 달에는 관계와 일정 조정, 셋째 달에는 일과 진로의 우선순위 재정리를 권합니다. 큰 변화를 한 번에 만들기보다 반복 가능한 기준을 세우면 심리적 안정감과 실행력이 함께 올라갈 가능성이 있습니다.",
     cautions: [
       "결과를 단정적인 판단으로 받아들이기보다 현재 상태를 정리하는 참고 자료로 활용하세요.",
       "감정 신호가 높게 느껴지는 날에는 중요한 결정을 잠시 미루고 수면과 식사를 먼저 확인하세요.",
@@ -261,11 +316,15 @@ function getFullReport(result: CombinedStoredResult): FullReport {
       weakProfile.routine[0],
       "오늘 할 일을 3개 이하로 줄이기",
       "잠들기 전 감정일기 세 줄 적기",
+      "확인 가능한 사실과 추측을 나누어 적기",
+      "가까운 사람에게 필요한 도움을 한 문장으로 요청하기",
     ],
     journalQuestions: [
       "오늘 내 마음을 가장 많이 차지한 감정은 무엇이었나요?",
       "내가 지금 줄여도 되는 부담은 무엇인가요?",
       "내일의 나를 위해 오늘 작게 회복할 수 있는 행동은 무엇인가요?",
+      "내가 사실로 확인한 것과 아직 추측하고 있는 것은 무엇인가요?",
+      "요즘 나에게 가장 필요한 말은 무엇인가요?",
     ],
     sajuNature: dominantProfile.nature,
     daewoonFlow: `대운은 ${getDaewoonDirection(result.profile.gender, Number(result.profile.birthYear))} 기준으로 보며, 다음 흐름은 ${result.daewoon[1]?.age ?? result.daewoon[0]?.age}세 전후 ${result.daewoon[1]?.ganji ?? result.daewoon[0]?.ganji} 기운을 참고해볼 수 있습니다.`,
@@ -273,14 +332,14 @@ function getFullReport(result: CombinedStoredResult): FullReport {
     sajuCautions: [weakProfile.caution, "운세 해석은 선택의 방향을 가볍게 점검하는 참고 콘텐츠로 보는 것이 좋습니다."],
     usefulEnergy: weakProfile.useful,
     combinedInterpretation: [
-      `이번 결과에서는 ${scoreLabels[highestSignal]} 신호가 비교적 선명하게 나타났고, 사주에서는 ${result.dominantElement} 기운이 중심으로 보입니다. 두 결과를 함께 보면 에너지를 더 쓰기보다 어디에 쓰고 있는지 확인하는 시간이 필요할 가능성이 있습니다.`,
-      `${result.dominantElement} 기운은 ${dominantProfile.nature} 이 강점은 현재의 감정 신호를 억누르는 데 쓰기보다, 생활을 다시 정돈하는 기준으로 활용해볼 수 있습니다.`,
-      `부족하게 나타난 ${result.weakElement} 기운은 ${weakProfile.useful} 심리 결과에서 부담이 높게 나온 항목과 연결하면, 큰 변화보다 작고 반복 가능한 회복 행동이 더 잘 맞을 가능성이 있습니다.`,
-      `${scoreLabels[strongest]} 점수는 현재 당신이 이미 가진 자원을 보여주는 지표로 참고할 수 있습니다. 다만 강점을 계속 증명하려고 하면 피로가 커질 수 있으니, 오늘은 강점을 회복의 도구로 쓰는 편이 좋습니다.`,
-      `오늘의 운세 점수는 ${result.todayFortuneScore}점으로 계산됩니다. 이는 좋고 나쁨을 단정하는 수치가 아니라, 오늘의 기운을 생활 리듬과 감정 정리에 어떻게 연결할지 보는 참고 지표입니다.`,
-      `따라서 지금은 무리한 확장보다 루틴 회복, 감정 기록, 관계와 일정의 정리가 도움이 될 가능성이 있습니다. 특히 ${weakProfile.routine.join(", ")} 같은 행동을 작게 시도해볼 수 있습니다.`,
+      `이번 종합 결과는 단순히 점수가 높고 낮다는 이야기가 아니라, 지금 마음이 어떤 방식으로 에너지를 쓰고 있는지 보여주는 참고 자료입니다. 심리 응답에서는 ${scoreLabels[highestSignal]} 신호가 가장 앞에 나타났고, 이어서 ${mainSignalText} 흐름이 함께 확인됩니다. 이는 최근의 마음이 한 가지 감정으로만 설명되기보다, 해야 할 일의 압박, 앞으로의 걱정, 회복되지 않은 피로가 서로 영향을 주고 있을 가능성을 보여줍니다. 특히 긴장 상태가 오래 이어지면 사소한 일도 크게 느껴지고, 쉬는 시간에도 마음이 완전히 내려오지 않을 수 있습니다. 지금 필요한 것은 스스로를 더 몰아붙이는 해석이 아니라, 마음이 계속 대기 상태에 머무는 이유를 차분히 구분하는 일입니다.`,
+      `사주 흐름에서는 ${result.dominantElement} 기운이 중심으로 보이며, ${dominantProfile.nature} 이 기운은 본래 상황을 밀고 나가거나 자신만의 기준을 세우는 데 도움이 될 수 있습니다. 다만 심리 결과에서 부담 신호가 함께 높게 나타날 때는 이 장점이 '더 해내야 한다'는 압박으로 바뀔 가능성도 있습니다. 강점은 계속 증명해야 하는 숙제가 아니라 회복을 설계하는 도구로 쓰는 편이 좋습니다. 예를 들어 책임감이 강한 사람은 쉬는 일도 일정에 넣어야 실제로 쉬고, 분석력이 좋은 사람은 걱정을 반복하기보다 확인 가능한 사실과 추측을 나누어야 마음이 가벼워질 수 있습니다.`,
+      `부족하게 나타난 ${result.weakElement} 기운은 지금의 회복 방향을 잡는 데 참고할 수 있습니다. ${weakProfile.useful} 심리적으로도 같은 흐름이 보입니다. 큰 결심이나 급격한 변화보다, 작고 반복 가능한 행동을 통해 몸과 마음이 다시 예측 가능한 리듬을 느끼는 것이 중요합니다. 특히 ${weakProfile.routine.join(", ")} 같은 루틴은 너무 단순해 보여도 현재 상태에서는 효과적인 회복 신호가 될 수 있습니다. 마음이 지쳐 있을수록 거창한 계획은 실패 경험으로 남기 쉽기 때문에, 성공 가능성이 높은 작은 행동을 반복하는 편이 더 안정적입니다.`,
+      `${scoreLabels[strongest]}와 ${scoreLabels[secondStrength]} 항목은 현재 당신이 이미 가지고 있는 심리적 자원으로 볼 수 있습니다. 이 자원은 대인관계, 일, 자기관리에서 분명한 힘이 될 수 있지만, 피로가 누적된 시기에는 장점이 부담으로 바뀌기도 합니다. 사람을 잘 살피는 능력은 타인의 기분을 과도하게 책임지는 방향으로 흐를 수 있고, 기준을 세우는 능력은 스스로를 평가하는 잣대가 될 수 있습니다. 따라서 앞으로 한동안은 강점을 밖으로 더 많이 쓰기보다 안쪽으로 돌려, 내 감정의 이름을 붙이고 내가 감당할 수 있는 범위를 정하는 데 활용해볼 수 있습니다.`,
+      `오늘의 운세 점수는 ${result.todayFortuneScore}점으로 계산됩니다. 이 수치는 하루의 좋고 나쁨을 단정하는 예언이 아니라, 오늘의 기운을 어떻게 생활 리듬과 연결할지 보는 참고 지표입니다. 점수가 높게 느껴지는 날에도 무리하게 확장할 필요는 없고, 점수가 낮게 느껴지는 날에도 하루 전체가 나쁜 것은 아닙니다. 오히려 오늘은 선택지를 줄이고, 회복에 필요한 조건을 먼저 확보하는 방식이 잘 맞습니다. 식사, 수면, 공간 정리, 짧은 산책처럼 몸이 바로 이해할 수 있는 행동이 마음의 불확실성을 낮추는 데 도움이 될 가능성이 있습니다.`,
+      `앞으로 1개월은 회복의 기본값을 다시 세우는 시간으로 참고해볼 수 있습니다. 새로운 목표를 많이 추가하기보다 지금 이미 들고 있는 부담을 덜어내고, 하루를 마쳤을 때 '완벽하진 않아도 정리됐다'는 감각을 만드는 것이 우선입니다. 앞으로 3개월은 그 기반 위에서 관계, 일, 진로의 우선순위를 다시 조정하는 흐름이 좋습니다. 지금의 결과가 당신을 규정하는 것은 아니며, 현재의 마음과 생활 패턴을 이해하기 위한 지도에 가깝습니다. 지도를 보고 전부 바꾸려 하기보다, 오늘 가장 작은 한 가지부터 바꾸는 것이 실제 회복으로 이어질 가능성이 있습니다.`,
     ],
-    playlists: [weakProfile.playlist, "감정정리 안정 플레이리스트", "잠들기 전 회복 플레이리스트"],
+    playlists: [weakProfile.playlist, "감정정리 안정 플레이리스트", "잠들기 전 회복 플레이리스트", "불안 완화 호흡 플레이리스트", "아침 루틴 회복 플레이리스트"],
     songs: tracks.map((track) => track.title),
   };
 }
@@ -370,7 +429,26 @@ function downloadPdf(result: CombinedStoredResult, report: FullReport, token: st
   const rows = Object.entries(result.psychology.scores)
     .map(([key, score]) => `<tr><td>${escapeHtml(scoreLabels[key as PsychologyScoreKey])}</td><td>${score}</td></tr>`)
     .join("");
-  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>SimSimPlay-종합리포트-${formatDate(new Date(), "")}</title><style>body{font-family:Arial,'Malgun Gothic',sans-serif;line-height:1.7;color:#111;padding:40px}h1,h2{page-break-after:avoid}table{border-collapse:collapse;width:100%}td{border:1px solid #ddd;padding:8px}.cover{min-height:60vh;display:flex;flex-direction:column;justify-content:center}.note{color:#555;font-size:13px}</style></head><body><section class="cover"><h1>SimSimPlay 종합 리포트</h1><p>생성일 ${created}</p></section><h2>심리테스트 결과</h2><table>${rows}</table><h2>사주풀이 결과</h2><p>원국: ${result.saju.year}년 ${result.saju.month}월 ${result.saju.day}일 ${result.saju.hour}시</p><p>강한 오행: ${result.dominantElement}, 부족한 오행: ${result.weakElement}</p><p>오늘의 운세 점수: ${result.todayFortuneScore}</p><h2>종합 해석</h2>${report.combinedInterpretation.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}<h2>추천 행동</h2><ul>${report.recommendedActions.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><h2>추천 플레이리스트</h2><ul>${report.playlists.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><p class="note">본 결과는 자기이해와 감정정리를 돕기 위한 참고용 콘텐츠이며, 의학적 진단이나 치료를 대체하지 않습니다. 사주 및 운세 해석은 전통 명리학 기반의 참고용 콘텐츠입니다.</p><script>document.title='SimSimPlay-종합리포트-${formatDate(new Date(), "")}.pdf';window.print();</script></body></html>`;
+  const graphBars = Object.entries(result.psychology.scores)
+    .map(([key, score]) => `<div class="bar-row"><span>${escapeHtml(scoreLabels[key as PsychologyScoreKey])}</span><div class="bar"><i style="width:${score}%"></i></div><b>${score}</b></div>`)
+    .join("");
+  const psychologyReport = [
+    ["현재 마음 상태", report.mentalState],
+    ["감정 패턴 분석", report.emotionalPattern],
+    ["사고 패턴 분석", report.thoughtPattern],
+    ["스트레스 원인 추정", report.stressCause],
+    ["불안 원인 추정", report.anxietyCause],
+    ["에너지 상태 분석", report.energyState],
+    ["자존감 분석", report.selfEsteemAnalysis],
+    ["대인관계 성향 분석", report.relationshipAnalysis],
+    ["사회성 분석", report.socialityAnalysis],
+    ["직업 성향 분석", report.careerAnalysis],
+    ["번아웃 위험도", report.burnoutRisk],
+    ["현재 가장 필요한 회복 요소", report.recoveryNeed],
+    ["앞으로 1개월 관리 팁", report.oneMonthTips],
+    ["앞으로 3개월 관리 팁", report.threeMonthTips],
+  ].map(([title, body]) => `<h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p>`).join("");
+  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>SimSimPlay-종합리포트-${formatDate(new Date(), "")}</title><style>body{font-family:Arial,'Malgun Gothic',sans-serif;line-height:1.75;color:#111;padding:40px}h1,h2{page-break-after:avoid}h3{margin-top:18px;margin-bottom:4px}table{border-collapse:collapse;width:100%;margin:12px 0}td{border:1px solid #ddd;padding:8px}.cover{min-height:55vh;display:flex;flex-direction:column;justify-content:center}.note{color:#555;font-size:13px}.bar-row{display:grid;grid-template-columns:110px 1fr 38px;gap:10px;align-items:center;margin:8px 0}.bar{height:12px;background:#eee;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:#38bdf8}.section{page-break-inside:avoid}</style></head><body><section class="cover"><h1>SimSimPlay 종합 리포트</h1><p>생성일 ${created}</p></section><h2>심리 점수</h2><table>${rows}</table><h2>그래프</h2>${graphBars}<h2>심리 리포트</h2>${psychologyReport}<h3>현재 피해야 할 행동</h3><ul>${report.avoidActions.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><h3>감정일기 추천 질문 5개</h3><ul>${report.journalQuestions.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><h2>사주 리포트</h2><p>원국: ${result.saju.year}년 ${result.saju.month}월 ${result.saju.day}일 ${result.saju.hour}시</p><p>목화토금수 오행 개수: ${elementNames.map((element) => `${element} ${result.elementCounts[element]}`).join(", ")}</p><p>강한 오행: ${result.dominantElement}, 부족한 오행: ${result.weakElement}</p><p>타고난 성향: ${escapeHtml(report.sajuNature)}</p><p>대운 흐름: ${escapeHtml(report.daewoonFlow)}</p><p>오늘의 운세 점수: ${result.todayFortuneScore}</p><p>오늘의 회복 루틴: ${report.recoveryRoutine.map(escapeHtml).join(", ")}</p><p>조심해야 할 점: ${report.sajuCautions.map(escapeHtml).join(" ")}</p><p>활용하면 좋은 기운: ${escapeHtml(report.usefulEnergy)}</p><h2>종합 해석</h2>${report.combinedInterpretation.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}<h2>추천 행동</h2><ul>${report.recommendedActions.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><h2>추천 플레이리스트</h2><ul>${report.playlists.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><h2>추천 음악</h2><ul>${report.songs.map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul><p class="note">본 결과는 자기이해와 감정정리를 돕기 위한 참고용 콘텐츠이며, 의학적 진단이나 치료를 대체하지 않습니다. 사주 및 운세 해석은 전통 명리학 기반의 참고용 콘텐츠입니다.</p><script>document.title='SimSimPlay-종합리포트-${formatDate(new Date(), "")}.pdf';window.print();</script></body></html>`;
   const popup = window.open("", "_blank", "width=900,height=1200");
   if (!popup) return;
   popup.document.open();
@@ -420,7 +498,36 @@ export function PsychologyResultClient() {
       </div>
 
       {!unlocked ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-pink-300/30 bg-pink-300/10 p-5 shadow-2xl shadow-pink-950/20 sm:p-6">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
+              <div>
+                <h2 className="text-2xl font-black text-white">전체 심리상담 + 사주 리포트 보기</h2>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+                  심리테스트 결과, 사주 성향 분석, 오늘의 회복 루틴, 추천 플레이리스트를 모두 확인할 수 있습니다.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-slate-100">
+                  {["심리분석 결과", "사주풀이 결과", "회복 루틴", "추천 음악", "PDF 저장"].map((item) => (
+                    <span key={item} className="rounded-full border border-white/10 bg-black/20 px-3 py-2">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="lg:text-right">
+                <p className="text-sm font-bold text-slate-400">정가 2,990원</p>
+                <p className="mt-1 text-3xl font-black text-pink-100">{hasUtm ? "오늘만 990원" : "2,990원"}</p>
+                <button
+                  type="button"
+                  onClick={() => setUnlockToken(handlePaymentClick())}
+                  className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-black text-slate-950 lg:w-auto"
+                >
+                  결제하고 전체 페이지 보기
+                </button>
+                <p className="mt-2 text-xs font-bold text-slate-400">현재 버튼은 개발용 임시 잠금 해제만 수행합니다.</p>
+              </div>
+            </div>
+          </section>
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
             <div className="space-y-4" aria-hidden="true">
               <div className="h-6 w-2/3 rounded-full bg-white/10" />
@@ -432,27 +539,6 @@ export function PsychologyResultClient() {
               <div className="h-44 rounded-2xl bg-white/10" />
             </div>
           </div>
-          <aside className="rounded-3xl border border-pink-300/30 bg-pink-300/10 p-5 sm:p-6">
-            <h2 className="text-2xl font-black text-white">전체 심리상담 + 사주 리포트 보기</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
-              심리테스트 결과, 사주 성향 분석, 오늘의 회복 루틴, 추천 플레이리스트를 모두 확인할 수 있습니다.
-            </p>
-            <div className="mt-5">
-              {hasUtm ? (
-                <p className="text-3xl font-black text-pink-100">오늘만 990원</p>
-              ) : (
-                <p className="text-3xl font-black text-white">2,990원</p>
-              )}
-              <p className="mt-1 text-xs font-bold text-slate-400">현재 버튼은 개발용 임시 잠금 해제만 수행합니다.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setUnlockToken(handlePaymentClick())}
-              className="mt-6 w-full rounded-full bg-white px-5 py-4 text-sm font-black text-slate-950"
-            >
-              결제하고 전체 페이지 보기
-            </button>
-          </aside>
         </div>
       ) : null}
 
@@ -488,11 +574,21 @@ export function PsychologyResultClient() {
             <h2 className="text-2xl font-black text-white">심리 리포트</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <ReportBlock title="현재 마음 상태" body={fullReport.mentalState} />
-              <ReportBlock title="주요 감정" body={fullReport.emotions.join(", ")} />
-              <ReportBlock title="사고 패턴" body={fullReport.thoughtPattern} />
-              <ReportBlock title="주의할 점" body={fullReport.cautions.join(" ")} />
-              <ReportBlock title="오늘의 추천 행동" body={fullReport.recommendedActions.join(" / ")} />
-              <ReportBlock title="감정일기에 적어볼 질문" body={fullReport.journalQuestions.join(" ")} />
+              <ReportBlock title="감정 패턴 분석" body={fullReport.emotionalPattern} />
+              <ReportBlock title="사고 패턴 분석" body={fullReport.thoughtPattern} />
+              <ReportBlock title="스트레스 원인 추정" body={fullReport.stressCause} />
+              <ReportBlock title="불안 원인 추정" body={fullReport.anxietyCause} />
+              <ReportBlock title="에너지 상태 분석" body={fullReport.energyState} />
+              <ReportBlock title="자존감 분석" body={fullReport.selfEsteemAnalysis} />
+              <ReportBlock title="대인관계 성향 분석" body={fullReport.relationshipAnalysis} />
+              <ReportBlock title="사회성 분석" body={fullReport.socialityAnalysis} />
+              <ReportBlock title="직업 성향 분석" body={fullReport.careerAnalysis} />
+              <ReportBlock title="번아웃 위험도" body={fullReport.burnoutRisk} />
+              <ReportBlock title="현재 가장 필요한 회복 요소" body={fullReport.recoveryNeed} />
+              <ReportBlock title="현재 피해야 할 행동" body={fullReport.avoidActions.join(" / ")} />
+              <ReportBlock title="앞으로 1개월 관리 팁" body={fullReport.oneMonthTips} />
+              <ReportBlock title="앞으로 3개월 관리 팁" body={fullReport.threeMonthTips} />
+              <ReportBlock title="감정일기 추천 질문 5개" body={fullReport.journalQuestions.join(" ")} />
             </div>
           </section>
 
@@ -527,9 +623,9 @@ export function PsychologyResultClient() {
           </section>
 
           <section className="grid gap-6 lg:grid-cols-3">
-            <Recommendation title="추천 행동 3개" items={fullReport.recommendedActions} />
-            <Recommendation title="추천 플레이리스트 3개" items={fullReport.playlists} />
-            <Recommendation title="추천 음악 3곡" items={fullReport.songs} />
+            <Recommendation title="추천 행동 5개" items={fullReport.recommendedActions} />
+            <Recommendation title="추천 플레이리스트 5개" items={fullReport.playlists} />
+            <Recommendation title="추천 음악 5곡" items={fullReport.songs} />
           </section>
         </div>
       ) : null}
