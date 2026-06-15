@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BlogPost } from "../lib/adminCatalog";
 
@@ -8,13 +8,67 @@ const CATEGORIES = [
   "전체", "꿈해몽", "심리테스트", "심리상담", "운세", "사주오행", "수면", "불안", "우울", "집중", "음악치유"
 ];
 
+const pageSizeOptions = [20, 50, 100] as const;
+type PageItem = number | "ellipsis-start" | "ellipsis-end";
+
+function getQueryParam(name: string) {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(name) || "";
+}
+
+function parsePositiveInt(value: string, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
+}
+
+function parsePageSize(value: string) {
+  const parsed = parsePositiveInt(value, 20);
+  return pageSizeOptions.includes(parsed as (typeof pageSizeOptions)[number]) ? parsed : 20;
+}
+
+function buildPaginationItems(currentPage: number, totalPages: number): PageItem[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const isNearStart = currentPage <= 3;
+  const isNearEnd = currentPage >= totalPages - 2;
+  const start = isNearStart ? 2 : isNearEnd ? totalPages - 4 : currentPage - 2;
+  const end = isNearStart ? 5 : isNearEnd ? totalPages - 1 : currentPage + 2;
+  const items: PageItem[] = [1];
+
+  if (start > 2) items.push("ellipsis-start");
+  for (let page = start; page <= end; page += 1) items.push(page);
+  if (end < totalPages - 1) items.push("ellipsis-end");
+  items.push(totalPages);
+
+  return items;
+}
+
+function buildMobilePaginationItems(currentPage: number, totalPages: number): PageItem[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 2) return [1, 2, 3, "ellipsis-end", totalPages];
+  if (currentPage >= totalPages - 1) return [1, "ellipsis-start", totalPages - 2, totalPages - 1, totalPages];
+
+  const end = Math.min(totalPages - 1, currentPage + 2);
+  const items: PageItem[] = [];
+  for (let page = currentPage; page <= end; page += 1) items.push(page);
+  if (end < totalPages - 1) items.push("ellipsis-end");
+  items.push(totalPages);
+  return items;
+}
+
 export default function BlogClient() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("전체");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [pageSize, setPageSize] = useState(20);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState(() => getQueryParam("category") || "전체");
+  const [searchTerm, setSearchTerm] = useState(() => getQueryParam("search"));
+  const [pageSize, setPageSize] = useState(() => parsePageSize(getQueryParam("limit")));
+  const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(getQueryParam("page"), 1));
+  const isInitialFilterSync = useRef(true);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -41,18 +95,93 @@ export default function BlogClient() {
   }, [posts, selectedCategory, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPosts.length / pageSize));
+  const desktopPageItems = useMemo(() => buildPaginationItems(currentPage, totalPages), [currentPage, totalPages]);
+  const mobilePageItems = useMemo(() => buildMobilePaginationItems(currentPage, totalPages), [currentPage, totalPages]);
   const visiblePosts = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredPosts.slice(start, start + pageSize);
   }, [filteredPosts, currentPage, pageSize]);
 
   useEffect(() => {
+    if (isInitialFilterSync.current) {
+      isInitialFilterSync.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [selectedCategory, searchTerm, pageSize]);
 
   useEffect(() => {
     setCurrentPage(page => Math.min(page, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    function syncFromQuery() {
+      setSelectedCategory(getQueryParam("category") || "전체");
+      setSearchTerm(getQueryParam("search"));
+      setPageSize(parsePageSize(getQueryParam("limit")));
+      setCurrentPage(parsePositiveInt(getQueryParam("page"), 1));
+    }
+
+    window.addEventListener("popstate", syncFromQuery);
+    return () => window.removeEventListener("popstate", syncFromQuery);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("page", String(currentPage));
+    params.set("limit", String(pageSize));
+
+    if (selectedCategory === "전체") {
+      params.delete("category");
+    } else {
+      params.set("category", selectedCategory);
+    }
+
+    if (searchTerm.trim()) {
+      params.set("search", searchTerm.trim());
+    } else {
+      params.delete("search");
+    }
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [currentPage, pageSize, searchTerm, selectedCategory]);
+
+  function goToPage(page: number) {
+    setCurrentPage(Math.max(1, Math.min(totalPages, page)));
+  }
+
+  function renderPageItems(items: PageItem[]) {
+    return items.map((item) => {
+      if (typeof item !== "number") {
+        return (
+          <span key={item} className="flex h-9 min-w-7 items-center justify-center text-sm font-bold text-slate-500">
+            ...
+          </span>
+        );
+      }
+
+      return (
+        <button
+          key={item}
+          type="button"
+          onClick={() => goToPage(item)}
+          aria-current={currentPage === item ? "page" : undefined}
+          className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-bold transition sm:h-10 sm:min-w-10 sm:px-3 ${
+            currentPage === item
+              ? "bg-violet-600 text-white"
+              : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+          }`}
+        >
+          {item}
+        </button>
+      );
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -150,37 +279,51 @@ export default function BlogClient() {
             ))}
           </div>
           {totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                이전
-              </button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(page => (
+            <div className="flex justify-center pt-3">
+              <div className="flex max-w-full flex-nowrap items-center justify-center gap-1 overflow-x-auto whitespace-nowrap px-1 pb-1 sm:gap-2">
                 <button
-                  key={page}
                   type="button"
-                  onClick={() => setCurrentPage(page)}
-                  className={`h-10 min-w-10 rounded-xl px-3 text-sm font-bold transition ${
-                    currentPage === page
-                      ? "bg-violet-600 text-white"
-                      : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-                  }`}
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className="flex h-9 shrink-0 items-center rounded-lg border border-white/10 bg-white/5 px-2 text-sm font-bold text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3"
                 >
-                  {page}
+                  <span aria-hidden="true">&lt;&lt;</span>
+                  <span className="hidden sm:ml-1 sm:inline">맨처음</span>
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                다음
-              </button>
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="flex h-9 shrink-0 items-center rounded-lg border border-white/10 bg-white/5 px-2 text-sm font-bold text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3"
+                >
+                  <span aria-hidden="true">&lt;</span>
+                  <span className="hidden sm:ml-1 sm:inline">이전</span>
+                </button>
+                <div className="hidden flex-nowrap items-center gap-1 sm:flex sm:gap-2">
+                  {renderPageItems(desktopPageItems)}
+                </div>
+                <div className="flex flex-nowrap items-center gap-1 sm:hidden">
+                  {renderPageItems(mobilePageItems)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex h-9 shrink-0 items-center rounded-lg border border-white/10 bg-white/5 px-2 text-sm font-bold text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3"
+                >
+                  <span className="hidden sm:mr-1 sm:inline">다음</span>
+                  <span aria-hidden="true">&gt;</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="flex h-9 shrink-0 items-center rounded-lg border border-white/10 bg-white/5 px-2 text-sm font-bold text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3"
+                >
+                  <span className="hidden sm:mr-1 sm:inline">맨끝</span>
+                  <span aria-hidden="true">&gt;&gt;</span>
+                </button>
+              </div>
             </div>
           )}
         </>

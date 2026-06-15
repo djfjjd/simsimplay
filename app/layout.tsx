@@ -29,14 +29,14 @@ export default function RootLayout({
       <body className="min-h-full bg-[#080914] text-slate-200">
         <MusicPlayerProvider>
           <header className="sticky top-0 z-50 border-b border-white/5 bg-[#080914]/88 backdrop-blur-md">
-            <nav className="mx-auto grid max-w-7xl items-center gap-2 px-4 py-2 md:gap-4 md:px-6 md:py-3 lg:grid-cols-[12rem_minmax(24rem,1fr)_12rem] lg:px-8">
+            <nav className="mx-auto grid max-w-7xl items-center gap-2 px-4 py-2 md:gap-4 md:px-6 md:py-3 lg:grid-cols-[8rem_minmax(14rem,22rem)_minmax(0,1fr)] lg:px-8">
               <Link href="/" className="justify-self-center text-xl font-bold tracking-tight text-white lg:justify-self-start">
                 SimSimPlay
               </Link>
               <div className="order-3 w-full justify-self-center lg:order-none">
                 <GlobalMiniPlayer />
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-medium md:gap-x-5 md:text-sm lg:justify-self-end">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs font-medium md:gap-x-4 md:text-sm lg:flex-nowrap lg:justify-self-end">
                 {[
                   ["심리테스트", "/psychology"],
                   ["사주풀이", "/fortune"],

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { AdminCategory, Song } from "../lib/adminCatalog";
 
 const emotionOptions = ["수면", "평온", "치유", "불안", "우울", "집중", "희망", "행복", "외로움", "그리움", "명상", "회복"];
@@ -128,7 +129,7 @@ export function AdminClient() {
     try {
       const [catRes, songRes] = await Promise.all([
         fetch("/api/admin/categories"),
-        fetch("/api/songs")
+        fetch("/api/admin/music")
       ]);
       const catData = (await catRes.json()) as { categories: AdminCategory[] };
       const songData = (await songRes.json()) as { songs: Song[] };
@@ -325,6 +326,13 @@ export function AdminClient() {
           <h2 className="text-2xl font-bold text-white">
             {form.id ? "음악 정보 수정" : "Suno 음악 퀵 등록"}
           </h2>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/music/bulk"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-500"
+            >
+              MP3 대량 업로드
+            </Link>
           {form.id && (
             <button 
               onClick={resetForm}
@@ -333,6 +341,7 @@ export function AdminClient() {
               취소하고 새로 등록하기
             </button>
           )}
+          </div>
         </div>
 
         <form onSubmit={handleSaveSong} className="space-y-6">

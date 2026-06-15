@@ -9,6 +9,7 @@ export type Song = {
   categoryId: number | null;
   categoryName: string;
   title: string;
+  slug: string;
   prompt: string;
   description: string;
   emotionTags: string[];
@@ -16,6 +17,7 @@ export type Song = {
   situationTags: string[];
   timeTags: string[];
   energyScore: number;
+  status: "draft" | "published";
   audioUrl: string;
   thumbnailUrl: string;
   youtubeUrl: string;

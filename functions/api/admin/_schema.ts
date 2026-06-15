@@ -4,8 +4,10 @@ const defaultCategories = [
   "명상",
   "행운",
   "우울",
+  "우울회복",
   "불안",
   "불안완화",
+  "새벽감성",
   "긍정에너지",
   "감정회복",
 ];
@@ -76,12 +78,14 @@ export async function ensureAdminSchema(db: D1Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         category_id INTEGER,
         title TEXT NOT NULL,
+        slug TEXT NOT NULL DEFAULT '',
         prompt TEXT NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
         mood_tags TEXT NOT NULL DEFAULT '[]',
         situation_tags TEXT NOT NULL DEFAULT '[]',
         time_tags TEXT NOT NULL DEFAULT '[]',
         energy_score INTEGER NOT NULL DEFAULT 50,
+        status TEXT NOT NULL DEFAULT 'published',
         audio_url TEXT NOT NULL DEFAULT '#',
         thumbnail_url TEXT NOT NULL DEFAULT '',
         youtube_url TEXT NOT NULL DEFAULT '#',
@@ -136,7 +140,17 @@ export async function ensureAdminSchema(db: D1Database) {
     await db.prepare("ALTER TABLE songs ADD COLUMN prompt TEXT NOT NULL DEFAULT ''").run();
   } catch {}
   try {
+    await db.prepare("ALTER TABLE songs ADD COLUMN slug TEXT NOT NULL DEFAULT ''").run();
+  } catch {}
+  try {
+    await db.prepare("ALTER TABLE songs ADD COLUMN status TEXT NOT NULL DEFAULT 'published'").run();
+  } catch {}
+  try {
     await db.prepare("ALTER TABLE songs ADD COLUMN time_tags TEXT NOT NULL DEFAULT '[]'").run();
+  } catch {}
+  try {
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_songs_slug ON songs(slug)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_songs_status_id ON songs(status, id)").run();
   } catch {}
   try {
     await db.prepare("CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug)").run();
@@ -183,12 +197,14 @@ export type SongRow = {
   category_id: number | null;
   category_name: string | null;
   title: string;
+  slug: string;
   prompt: string;
   description: string;
   mood_tags: string;
   situation_tags: string;
   time_tags: string;
   energy_score: number;
+  status: string;
   audio_url: string;
   thumbnail_url: string;
   youtube_url: string;
@@ -351,6 +367,7 @@ export function mapSong(row: SongRow) {
     categoryId: row.category_id,
     categoryName: row.category_name ?? "미분류",
     title: row.title,
+    slug: row.slug || "",
     prompt: row.prompt || "",
     description: row.description,
     emotionTags: moodTags,
@@ -358,6 +375,7 @@ export function mapSong(row: SongRow) {
     situationTags: parseJsonArray(row.situation_tags),
     timeTags: parseJsonArray(row.time_tags),
     energyScore: row.energy_score,
+    status: row.status || "published",
     audioUrl: row.audio_url,
     thumbnailUrl: row.thumbnail_url,
     youtubeUrl: row.youtube_url,

@@ -31,10 +31,14 @@ const songSelect = `
     songs.category_id,
     categories.name AS category_name,
     songs.title,
+    songs.slug,
+    songs.prompt,
     songs.description,
     songs.mood_tags,
     songs.situation_tags,
+    songs.time_tags,
     songs.energy_score,
+    songs.status,
     songs.audio_url,
     songs.thumbnail_url,
     songs.youtube_url,
@@ -162,9 +166,12 @@ async function getRecommendedTracks(env: Env, result: AnalyzeResult): Promise<Tr
     `
       ${songSelect}
       WHERE
+        songs.status = 'published'
+        AND (
         categories.name = ?
         OR songs.mood_tags LIKE ?
         OR songs.situation_tags LIKE ?
+        )
       ORDER BY songs.id DESC
       LIMIT 3
     `,

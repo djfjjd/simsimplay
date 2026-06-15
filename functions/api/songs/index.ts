@@ -31,12 +31,14 @@ const songSelect = `
     songs.category_id,
     categories.name AS category_name,
     songs.title,
+    songs.slug,
     songs.prompt,
     songs.description,
     songs.mood_tags,
     songs.situation_tags,
     songs.time_tags,
     songs.energy_score,
+    songs.status,
     songs.audio_url,
     songs.thumbnail_url,
     songs.youtube_url,
@@ -67,7 +69,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const search = url.searchParams.get("search")?.trim();
   
   const params: string[] = [];
-  const filters: string[] = [];
+  const filters: string[] = ["songs.status = 'published'"];
 
   if (category) {
     filters.push("categories.name = ?");
@@ -84,7 +86,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
-  const where = filters.length ? ` WHERE ${filters.join(" AND ")}` : "";
+  const where = ` WHERE ${filters.join(" AND ")}`;
   const { results } = await env.DB.prepare(`${songSelect}${where} ORDER BY songs.id DESC`)
     .bind(...params)
     .all<SongRow>();
@@ -117,12 +119,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       INSERT INTO songs (
         category_id,
         title,
+        slug,
         prompt,
         description,
         mood_tags,
         situation_tags,
         time_tags,
         energy_score,
+        status,
         audio_url,
         thumbnail_url,
         youtube_url,
@@ -130,18 +134,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
         apple_music_url,
         duration
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
   )
     .bind(
       categoryId,
       title,
+      "",
       textValue(payload?.prompt),
       textValue(payload?.description),
       JSON.stringify(emotionTags),
       JSON.stringify(situationTags),
       JSON.stringify(timeTags),
       clampEnergyScore(payload?.energyScore),
+      "published",
       optionalUrl(payload?.audioUrl),
       textValue(payload?.thumbnailUrl),
       optionalUrl(payload?.youtubeUrl),

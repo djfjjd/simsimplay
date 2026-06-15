@@ -436,7 +436,7 @@ export function GlobalMiniPlayer() {
     <section
       ref={playerRef}
       aria-label="전역 음악 플레이어"
-      className="relative mx-auto w-[calc(100vw-32px)] max-w-[420px] rounded-xl border border-white/10 bg-[#0d1020]/95 px-2.5 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl md:w-full md:max-w-[42rem] md:px-3"
+      className="relative mx-auto w-[calc(100vw-32px)] max-w-[420px] rounded-xl border border-white/10 bg-[#0d1020]/95 px-2.5 py-1.5 shadow-xl shadow-black/25 backdrop-blur-xl md:w-full md:max-w-[22rem] md:px-3"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div className="min-w-0 text-left">
