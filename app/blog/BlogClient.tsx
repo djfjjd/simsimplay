@@ -14,6 +14,7 @@ export default function BlogClient() {
   const [selectedCategory, setSelectedCategory] = useState("전체");
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -39,7 +40,19 @@ export default function BlogClient() {
     });
   }, [posts, selectedCategory, searchTerm]);
 
-  const visiblePosts = useMemo(() => filteredPosts.slice(0, pageSize), [filteredPosts, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / pageSize));
+  const visiblePosts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPosts.slice(start, start + pageSize);
+  }, [filteredPosts, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchTerm, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(page => Math.min(page, totalPages));
+  }, [totalPages]);
 
   return (
     <div className="space-y-8">
@@ -48,6 +61,9 @@ export default function BlogClient() {
         <div className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-400">
             총 <span className="font-bold text-white">{filteredPosts.length}</span>개의 글
+            <span className="ml-2 text-slate-500">
+              {filteredPosts.length > 0 ? `${currentPage} / ${totalPages} 페이지` : ""}
+            </span>
           </p>
           <label className="flex items-center gap-3 text-sm text-slate-400">
             <span>보기</span>
@@ -103,35 +119,71 @@ export default function BlogClient() {
           ))}
         </div>
       ) : filteredPosts.length > 0 ? (
-        <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
-          {visiblePosts.map(post => (
-            <Link 
-              key={post.id} 
-              href={`/blog/${post.slug}`}
-              className="group block p-5 transition hover:bg-white/[0.06] md:p-6"
-            >
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span className="rounded-full bg-violet-500/10 px-2.5 py-1 font-bold text-violet-400">
-                      {post.category}
-                    </span>
-                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+        <>
+          <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
+            {visiblePosts.map(post => (
+              <Link 
+                key={post.id} 
+                href={`/blog/${post.slug}`}
+                className="group block p-5 transition hover:bg-white/[0.06] md:p-6"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="rounded-full bg-violet-500/10 px-2.5 py-1 font-bold text-violet-400">
+                        {post.category}
+                      </span>
+                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <h3 className="mb-2 text-lg font-bold leading-snug text-white transition group-hover:text-violet-300 md:text-xl">
+                      {post.title}
+                    </h3>
+                    <p className="line-clamp-2 text-sm leading-relaxed text-slate-400 md:text-base">
+                      {post.description}
+                    </p>
                   </div>
-                  <h3 className="mb-2 text-lg font-bold leading-snug text-white transition group-hover:text-violet-300 md:text-xl">
-                    {post.title}
-                  </h3>
-                  <p className="line-clamp-2 text-sm leading-relaxed text-slate-400 md:text-base">
-                    {post.description}
-                  </p>
+                  <span className="shrink-0 text-sm font-medium text-slate-500 transition group-hover:text-white">
+                    자세히 보기
+                  </span>
                 </div>
-                <span className="shrink-0 text-sm font-medium text-slate-500 transition group-hover:text-white">
-                  자세히 보기
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                이전
+              </button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(page => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`h-10 min-w-10 rounded-xl px-3 text-sm font-bold transition ${
+                    currentPage === page
+                      ? "bg-violet-600 text-white"
+                      : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                다음
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="mb-4 rounded-full bg-white/5 p-6">

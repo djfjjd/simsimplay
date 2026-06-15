@@ -4,15 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BlogPost } from "../../lib/adminCatalog";
 
+declare global {
+  interface Window {
+    __SIMSIMPLAY_POST__?: BlogPost;
+  }
+}
+
 function getCurrentSlug(fallback: string) {
   if (typeof window === "undefined") return fallback;
   return decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() || fallback);
 }
 
+function getInitialPost(slug: string) {
+  if (typeof window === "undefined") return null;
+  const post = window.__SIMSIMPLAY_POST__;
+  return post && post.slug === slug ? post : null;
+}
+
 export default function PostDetailClient({ slug }: { slug: string }) {
   const [resolvedSlug, setResolvedSlug] = useState(() => getCurrentSlug(slug));
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [post, setPost] = useState<BlogPost | null>(() => getInitialPost(getCurrentSlug(slug)));
+  const [isLoading, setIsLoading] = useState(() => !getInitialPost(getCurrentSlug(slug)));
 
   useEffect(() => {
     const pathSlug = getCurrentSlug(slug);
@@ -24,6 +36,13 @@ export default function PostDetailClient({ slug }: { slug: string }) {
   useEffect(() => {
     async function fetchPost() {
       if (!resolvedSlug || resolvedSlug === "__post__") {
+        setIsLoading(false);
+        return;
+      }
+
+      const injectedPost = getInitialPost(resolvedSlug);
+      if (injectedPost) {
+        setPost(injectedPost);
         setIsLoading(false);
         return;
       }

@@ -19,16 +19,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export async function generateStaticParams() {
   return [
     { slug: "__post__" },
-    { slug: "dream-police-arrest-1" },
-    { slug: "dream-police-investigation-1" },
-    { slug: "dream-debt-collector-1" },
-    { slug: "dream-detective-chase-1" },
-    { slug: "dream-murder-witness-1" },
-    { slug: "dream-stalking-1" },
-    { slug: "dream-chase-repeat-1" },
-    { slug: "dream-teeth-falling-1" },
-    { slug: "dream-teeth-fix-1" },
-    { slug: "dream-cleaning-toilet-1" },
   ];
 }
 
