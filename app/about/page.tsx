@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { PageShell } from "../components/PageShell";
+
+export const metadata: Metadata = {
+  title: "사이트소개 | SimSimPlay",
+  description: "SimSimPlay의 서비스 목적, 감정정리 콘텐츠 방향, 힐링음악 운영 원칙을 소개합니다.",
+};
 
 const sections = [
   {

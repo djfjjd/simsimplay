@@ -18,10 +18,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer Disclaimer */}
-      <footer className="px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-8 text-center text-sm leading-6 text-slate-600">
-        <p>© 2026 SimSimPlay. 본 서비스는 의료적 진단을 대체하지 않는 셀프케어 보조 도구입니다.</p>
-      </footer>
     </main>
   );
 }

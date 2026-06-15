@@ -3,15 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 
+type BulkResult = {
+  title: string;
+  status: "success" | "error";
+  error?: string;
+  category?: string;
+  contentLength?: number;
+};
+
 export default function BulkUploadClient() {
   const [text, setText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<BulkResult[]>([]);
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   async function handleGenerate() {
-    const titles = text.split("\n").map(t => t.trim()).filter(Boolean);
+    const titles = text.split("\n").map((title) => title.trim()).filter(Boolean);
     if (titles.length === 0) {
       setMessage("제목을 하나 이상 입력해 주세요.");
       return;
@@ -27,10 +35,10 @@ export default function BulkUploadClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ titles, status })
       });
-      const data = (await res.json()) as { results?: any[]; error?: string };
+      const data = (await res.json()) as { results?: BulkResult[]; error?: string };
       if (res.ok) {
         setResults(data.results || []);
-        setMessage(`${data.results?.length || 0}개의 글이 생성되었습니다.`);
+        setMessage(`${data.results?.length || 0}개의 장문 SEO 글이 생성되었습니다.`);
         setText("");
       } else {
         setMessage(data.error || "생성에 실패했습니다.");
@@ -46,11 +54,11 @@ export default function BulkUploadClient() {
     <div className="space-y-8">
       <section className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
         <label className="block text-sm font-bold text-slate-400 mb-4">
-          제목 목록 (한 줄에 하나씩 입력)
+          제목 목록 (한 줄에 하나씩 입력, 각 제목당 3000~5000자 수준의 SEO 글 생성)
         </label>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={(event) => setText(event.target.value)}
           placeholder="경찰에게 잡혀가는 꿈 해몽&#10;윗니가 전부 빠지는 꿈 해몽&#10;불안할 때 대처하는 법"
           className="w-full min-h-[300px] rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:ring-2 focus:ring-violet-500/50"
         />
@@ -59,7 +67,7 @@ export default function BulkUploadClient() {
           <label className="block text-sm font-bold text-slate-400 mb-2">생성 상태</label>
           <select
             value={status}
-            onChange={e => setStatus(e.target.value as "draft" | "published")}
+            onChange={(event) => setStatus(event.target.value as "draft" | "published")}
             className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
           >
             <option value="draft">Draft</option>
@@ -90,7 +98,9 @@ export default function BulkUploadClient() {
               <div key={i} className="flex items-center justify-between rounded-xl bg-black/20 px-4 py-2 text-sm">
                 <span className="text-white truncate flex-1 mr-4">{res.title}</span>
                 {res.status === "success" ? (
-                  <span className="text-green-400 font-bold">성공</span>
+                  <span className="shrink-0 text-green-400 font-bold">
+                    성공 {res.category ? `· ${res.category}` : ""} {res.contentLength ? `· ${res.contentLength}자` : ""}
+                  </span>
                 ) : (
                   <span className="text-red-400 font-bold">실패: {res.error}</span>
                 )}
