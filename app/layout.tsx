@@ -6,8 +6,27 @@ import { SiteFooter } from "./components/SiteFooter";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SimSimPlay",
-  description: "감정정리와 힐링음악을 연결하는 셀프케어 플랫폼",
+  title: "SimSimPlay | 심리상담 · 감정분석 · 꿈해몽 · 힐링음악",
+  description:
+    "심리상담, 감정분석, 꿈해몽, 사주풀이, 힐링음악 플레이리스트를 제공하는 셀프케어 플랫폼",
+
+  openGraph: {
+    title: "SimSimPlay | 심리상담 · 감정분석 · 꿈해몽 · 힐링음악",
+    description:
+      "심리상담, 감정분석, 꿈해몽, 사주풀이, 힐링음악 플레이리스트를 제공하는 셀프케어 플랫폼",
+    url: "https://simsimplay.com",
+    siteName: "SimSimPlay",
+    locale: "ko_KR",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "SimSimPlay | 심리상담 · 감정분석 · 꿈해몽 · 힐링음악",
+    description:
+      "심리상담, 감정분석, 꿈해몽, 사주풀이, 힐링음악 플레이리스트를 제공하는 셀프케어 플랫폼",
+  },
+
   other: {
     "google-adsense-account": "ca-pub-5217418488676415",
   },
