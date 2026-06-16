@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   description:
     "심리상담, 감정분석, 꿈해몽, 사주풀이, 힐링음악 플레이리스트를 제공하는 셀프케어 플랫폼",
 
+  verification: {
+    other: {
+      "naver-site-verification":
+        "3ee6eef2539bb55e48c56098ec581cdfe4733354",
+    },
+  },
+
   openGraph: {
     title: "SimSimPlay | 심리상담 · 감정분석 · 꿈해몽 · 힐링음악",
     description:
