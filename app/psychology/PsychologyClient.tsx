@@ -8,7 +8,7 @@ import {
   type PsychologyQuestion,
 } from "../../src/lib/psychologyQuestions";
 
-type Gender = "여성" | "남성";
+type Gender = "여성" | "남성" | "";
 
 type PsychologyProfile = {
   birthYear: string;
@@ -24,6 +24,7 @@ const questionsKey = "simsimplay_psychology_questions";
 const resultKey = "simsimplay_psychology_result";
 
 const hours = [
+  { value: "", label: "선택해주세요" },
   { value: "모름", label: "모름" },
   { value: "자", label: "자시 (23:00 ~ 01:00)" },
   { value: "축", label: "축시 (01:00 ~ 03:00)" },
@@ -43,19 +44,9 @@ const initialProfile: PsychologyProfile = {
   birthYear: "",
   birthMonth: "",
   birthDay: "",
-  birthHour: "모름",
-  gender: "여성",
+  birthHour: "",
+  gender: "",
 };
-
-function readJson<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const saved = window.sessionStorage.getItem(key);
-    return saved ? (JSON.parse(saved) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 function Field({
   label,
@@ -66,7 +57,9 @@ function Field({
 }) {
   return (
     <label className="block text-left">
-      <span className="mb-2 block text-sm font-bold text-slate-200">{label}</span>
+      <span className="mb-2 block text-sm font-bold text-slate-200">
+        {label}
+      </span>
       {children}
     </label>
   );
@@ -81,25 +74,19 @@ export function PsychologyClient() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    setProfile(readJson(profileKey, initialProfile));
-    setQuestions(readJson<PsychologyQuestion[]>(questionsKey, []));
-    setAnswers(readJson<Record<string, number>>(answersKey, {}));
+    if (typeof window === "undefined") return;
+
+    window.sessionStorage.removeItem(profileKey);
+    window.sessionStorage.removeItem(answersKey);
+    window.sessionStorage.removeItem(questionsKey);
+    window.sessionStorage.removeItem(resultKey);
+
+    setProfile(initialProfile);
+    setQuestions([]);
+    setAnswers({});
+    setCurrentIndex(0);
+    setStep("profile");
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.sessionStorage.setItem(profileKey, JSON.stringify(profile));
-  }, [profile]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || questions.length === 0) return;
-    window.sessionStorage.setItem(questionsKey, JSON.stringify(questions));
-  }, [questions]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.sessionStorage.setItem(answersKey, JSON.stringify(answers));
-  }, [answers]);
 
   const progress = useMemo(() => {
     if (questions.length === 0) return 0;
@@ -107,37 +94,65 @@ export function PsychologyClient() {
   }, [currentIndex, questions.length]);
 
   const currentQuestion = questions[currentIndex];
-  const canStart = profile.birthYear && profile.birthMonth && profile.birthDay && profile.birthHour && profile.gender;
+
+  const canStart =
+    profile.birthYear.trim() &&
+    profile.birthMonth.trim() &&
+    profile.birthDay.trim() &&
+    profile.birthHour &&
+    profile.gender;
+
   const canGoNext = currentQuestion ? Boolean(answers[currentQuestion.id]) : false;
-  const scaleOptions = [...answerOptions].sort((left, right) => left.value - right.value);
+  const scaleOptions = [...answerOptions].sort(
+    (left, right) => left.value - right.value
+  );
 
   function updateProfile(field: keyof PsychologyProfile, value: string) {
-    setProfile((prev) => ({ ...prev, [field]: value }));
+    setProfile((prev) => ({ ...prev, [field]: value as Gender }));
   }
 
   function startTest(event: FormEvent) {
     event.preventDefault();
-    if (!canStart) return;
+    if (!canStart || typeof window === "undefined") return;
+
     const nextQuestions = createPsychologySessionQuestions();
+
     setQuestions(nextQuestions);
     setAnswers({});
     setCurrentIndex(0);
     setStep("questions");
+
+    window.sessionStorage.setItem(profileKey, JSON.stringify(profile));
+    window.sessionStorage.setItem(questionsKey, JSON.stringify(nextQuestions));
+    window.sessionStorage.setItem(answersKey, JSON.stringify({}));
     window.sessionStorage.removeItem(resultKey);
   }
 
   function selectAnswer(value: number) {
-    if (!currentQuestion) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
+    if (!currentQuestion || typeof window === "undefined") return;
+
+    const nextAnswers = {
+      ...answers,
+      [currentQuestion.id]: value,
+    };
+
+    setAnswers(nextAnswers);
+    window.sessionStorage.setItem(answersKey, JSON.stringify(nextAnswers));
   }
 
   function goNext() {
     if (!canGoNext) return;
+
     if (currentIndex === questions.length - 1) {
       router.push("/psychology/result");
       return;
     }
+
     setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
+  }
+
+  function goPrevious() {
+    setCurrentIndex((index) => Math.max(index - 1, 0));
   }
 
   if (step === "questions" && currentQuestion) {
@@ -145,7 +160,9 @@ export function PsychologyClient() {
       <section className="w-full max-w-3xl text-left">
         <article className="rounded-3xl border border-white/10 bg-[#101425] p-5 shadow-2xl shadow-black/25 sm:p-8">
           <div className="flex items-center justify-between gap-3 text-sm font-black text-sky-200">
-            <span className="tabular-nums">{String(currentIndex + 1).padStart(4, "0")} ▶</span>
+            <span className="tabular-nums">
+              {String(currentIndex + 1).padStart(4, "0")} ▶
+            </span>
             <span className="text-slate-300">
               현재 문항: {currentIndex + 1} / {questions.length}
             </span>
@@ -164,10 +181,14 @@ export function PsychologyClient() {
             </div>
 
             <div className="relative px-1">
-              <div className="absolute left-5 right-5 top-5 h-px bg-white/20" aria-hidden="true" />
+              <div
+                className="absolute left-5 right-5 top-5 h-px bg-white/20"
+                aria-hidden="true"
+              />
               <div className="relative grid grid-cols-5 gap-0">
                 {scaleOptions.map((option) => {
                   const active = answers[currentQuestion.id] === option.value;
+
                   return (
                     <button
                       key={option.value}
@@ -186,7 +207,11 @@ export function PsychologyClient() {
                       >
                         {active ? option.value : ""}
                       </span>
-                      <span className={`text-sm font-black tabular-nums ${active ? "text-pink-200" : "text-slate-400"}`}>
+                      <span
+                        className={`text-sm font-black tabular-nums ${
+                          active ? "text-pink-200" : "text-slate-400"
+                        }`}
+                      >
                         {option.value}
                       </span>
                     </button>
@@ -201,15 +226,17 @@ export function PsychologyClient() {
           <div className="grid grid-cols-[minmax(4.5rem,1fr)_auto_minmax(4.5rem,1fr)] items-center gap-2">
             <button
               type="button"
-              onClick={() => setCurrentIndex((index) => Math.max(index - 1, 0))}
+              onClick={goPrevious}
               disabled={currentIndex === 0}
               className="justify-self-start rounded-full border border-white/10 px-4 py-3 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5"
             >
               이전
             </button>
+
             <span className="text-center text-xs font-black text-slate-300 sm:text-sm">
               진행률 {progress}%
             </span>
+
             <button
               type="button"
               onClick={goNext}
@@ -225,32 +252,37 @@ export function PsychologyClient() {
   }
 
   return (
-    <form onSubmit={startTest} className="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/[0.06] p-5 text-left shadow-2xl shadow-black/25 sm:p-8">
+    <form
+      onSubmit={startTest}
+      className="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/[0.06] p-5 text-left shadow-2xl shadow-black/25 sm:p-8"
+    >
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="생년">
           <input
             value={profile.birthYear}
             onChange={(event) => updateProfile("birthYear", event.target.value)}
             inputMode="numeric"
-            placeholder="1994"
+            placeholder="YYYY"
             className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none focus:border-sky-300"
           />
         </Field>
+
         <Field label="생월">
           <input
             value={profile.birthMonth}
             onChange={(event) => updateProfile("birthMonth", event.target.value)}
             inputMode="numeric"
-            placeholder="08"
+            placeholder="MM"
             className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none focus:border-sky-300"
           />
         </Field>
+
         <Field label="생일">
           <input
             value={profile.birthDay}
             onChange={(event) => updateProfile("birthDay", event.target.value)}
             inputMode="numeric"
-            placeholder="15"
+            placeholder="DD"
             className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none focus:border-sky-300"
           />
         </Field>
@@ -270,6 +302,7 @@ export function PsychologyClient() {
             ))}
           </select>
         </Field>
+
         <Field label="성별">
           <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1">
             {(["여성", "남성"] as const).map((gender) => (
@@ -278,7 +311,9 @@ export function PsychologyClient() {
                 type="button"
                 onClick={() => updateProfile("gender", gender)}
                 className={`rounded-xl px-4 py-3 text-sm font-black ${
-                  profile.gender === gender ? "bg-sky-300 text-slate-950" : "text-slate-300"
+                  profile.gender === gender
+                    ? "bg-sky-300 text-slate-950"
+                    : "text-slate-300"
                 }`}
               >
                 {gender}
@@ -289,7 +324,9 @@ export function PsychologyClient() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-sky-300/15 bg-sky-300/10 p-4 text-sm leading-6 text-slate-300">
-        이 체크는 의학적 진단이 아닌 감정정리와 자기이해를 돕는 참고용 결과입니다. 입력 정보와 답변은 서버나 D1에 저장하지 않고 이 브라우저의 세션에만 임시 저장합니다.
+        이 체크는 의학적 진단이 아닌 감정정리와 자기이해를 돕는 참고용
+        결과입니다. 입력 정보와 답변은 서버나 D1에 저장하지 않고 이
+        브라우저의 세션에만 임시 저장합니다.
       </div>
 
       <button
