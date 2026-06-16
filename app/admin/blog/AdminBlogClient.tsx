@@ -24,6 +24,7 @@ export default function AdminBlogClient() {
   const [form, setForm] = useState<Partial<BlogPost>>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [message, setMessage] = useState("");
 
@@ -58,6 +59,10 @@ export default function AdminBlogClient() {
       return matchSearch && matchCategory && matchStatus;
     });
   }, [posts, searchTerm, filterCategory, filterStatus]);
+
+  const filteredPostIds = useMemo(() => filteredPosts.map(post => post.id), [filteredPosts]);
+  const selectedDraftIds = useMemo(() => posts.filter(post => post.status === "draft" && selectedIds.includes(post.id)).map(post => post.id), [posts, selectedIds]);
+  const isAllFilteredSelected = filteredPostIds.length > 0 && filteredPostIds.every(id => selectedIds.includes(id));
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -95,6 +100,40 @@ export default function AdminBlogClient() {
       }
     } catch (error) {
       setMessage("삭제에 실패했습니다.");
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedIds.length === 0) {
+      setMessage("삭제할 글을 선택해 주세요.");
+      return;
+    }
+
+    if (!confirm(`선택한 글 ${selectedIds.length}개를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+
+    setIsDeleting(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/admin/posts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      const data = (await res.json()) as { count?: number; error?: string };
+      if (res.ok) {
+        setMessage(`${data.count || 0}개의 글이 삭제되었습니다.`);
+        if (form.id && selectedIds.includes(form.id)) {
+          setForm(emptyForm);
+        }
+        fetchPosts();
+      } else {
+        setMessage(data.error || "삭제에 실패했습니다.");
+      }
+    } catch (error) {
+      setMessage("삭제 중 오류가 발생했습니다.");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -143,10 +182,13 @@ export default function AdminBlogClient() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]);
   }
 
-  function toggleAllFilteredDrafts() {
-    const draftIds = filteredPosts.filter(post => post.status === "draft").map(post => post.id);
-    const allSelected = draftIds.length > 0 && draftIds.every(id => selectedIds.includes(id));
-    setSelectedIds(allSelected ? selectedIds.filter(id => !draftIds.includes(id)) : Array.from(new Set([...selectedIds, ...draftIds])));
+  function toggleAllFilteredPosts() {
+    setSelectedIds(prev => {
+      const allSelected = filteredPostIds.length > 0 && filteredPostIds.every(id => prev.includes(id));
+      return allSelected
+        ? prev.filter(id => !filteredPostIds.includes(id))
+        : Array.from(new Set([...prev, ...filteredPostIds]));
+    });
   }
 
   return (
@@ -162,11 +204,19 @@ export default function AdminBlogClient() {
         </button>
         <button
           type="button"
-          onClick={() => handlePublish(selectedIds)}
-          disabled={isPublishing || selectedIds.length === 0}
+          onClick={() => handlePublish(selectedDraftIds)}
+          disabled={isPublishing || selectedDraftIds.length === 0}
           className="rounded-xl bg-cyan-600 px-6 py-3 font-bold text-white transition hover:bg-cyan-500 disabled:opacity-50"
         >
           선택 발행
+        </button>
+        <button
+          type="button"
+          onClick={handleDeleteSelected}
+          disabled={isDeleting || selectedIds.length === 0}
+          className="rounded-xl bg-red-600 px-6 py-3 font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
+        >
+          {isDeleting ? "삭제 중..." : "선택 삭제"}
         </button>
         <Link 
           href="/admin/blog/bulk"
@@ -278,7 +328,20 @@ export default function AdminBlogClient() {
 
       {/* List Section */}
       <section className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
-        <h2 className="mb-6 text-2xl font-bold text-white">게시글 목록</h2>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold text-white">게시글 목록</h2>
+          <div className="flex items-center gap-3 text-sm font-bold text-slate-400">
+            <span>선택 {selectedIds.length}개</span>
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              disabled={isDeleting || selectedIds.length === 0}
+              className="rounded-xl border border-red-400/30 px-4 py-2 text-red-300 transition hover:border-red-300 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              선택 삭제
+            </button>
+          </div>
+        </div>
         
         {/* Filters */}
         <div className="mb-8 grid gap-4 md:grid-cols-3">
@@ -314,9 +377,9 @@ export default function AdminBlogClient() {
                 <th className="pb-4 pl-2">
                   <input
                     type="checkbox"
-                    checked={filteredPosts.some(post => post.status === "draft") && filteredPosts.filter(post => post.status === "draft").every(post => selectedIds.includes(post.id))}
-                    onChange={toggleAllFilteredDrafts}
-                    aria-label="현재 목록 draft 전체 선택"
+                    checked={isAllFilteredSelected}
+                    onChange={toggleAllFilteredPosts}
+                    aria-label="현재 목록 전체 선택"
                     className="h-4 w-4 rounded border-white/20 bg-black/30"
                   />
                 </th>
@@ -337,9 +400,8 @@ export default function AdminBlogClient() {
                       type="checkbox"
                       checked={selectedIds.includes(post.id)}
                       onChange={() => toggleSelected(post.id)}
-                      disabled={post.status !== "draft"}
                       aria-label={`${post.title} 선택`}
-                      className="h-4 w-4 rounded border-white/20 bg-black/30 disabled:opacity-30"
+                      className="h-4 w-4 rounded border-white/20 bg-black/30"
                     />
                   </td>
                   <td className="py-4 pl-2 font-bold text-white">{post.title}</td>

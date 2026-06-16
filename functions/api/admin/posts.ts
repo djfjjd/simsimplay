@@ -70,5 +70,24 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
+  if (request.method === "DELETE") {
+    const body = await request.json().catch(() => ({})) as { ids?: unknown };
+    const ids = Array.isArray(body.ids)
+      ? body.ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+
+    if (ids.length === 0) {
+      return Response.json({ error: "삭제할 글을 선택해 주세요." }, { status: 400 });
+    }
+
+    const placeholders = ids.map(() => "?").join(", ");
+    const result = await db
+      .prepare(`DELETE FROM posts WHERE id IN (${placeholders})`)
+      .bind(...ids)
+      .run();
+
+    return Response.json({ success: true, count: result.meta.changes || 0 });
+  }
+
   return new Response("Method not allowed", { status: 405 });
 };

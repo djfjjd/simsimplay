@@ -101,6 +101,7 @@ export default function MusicBulkUploadClient() {
   const [message, setMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ count: number; errors: Array<{ fileName: string; error: string }> } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   const selectedTracks = useMemo(() => tracks.filter((track) => track.selected), [tracks]);
 
@@ -129,45 +130,75 @@ export default function MusicBulkUploadClient() {
     }
 
     setIsUploading(true);
-    setMessage(`${selectedTracks.length}개 파일을 R2에 업로드하고 D1에 저장하는 중입니다.`);
+    setMessage(`1 / ${selectedTracks.length} 파일을 R2에 업로드하고 D1에 저장하는 중입니다.`);
+    setUploadProgress({ current: 0, total: selectedTracks.length });
     setUploadResult(null);
 
+    const uploadedTrackIds: string[] = [];
+    const errors: Array<{ fileName: string; error: string }> = [];
+    let savedCount = 0;
+
     try {
-      const form = new FormData();
-      selectedTracks.forEach((track) => form.append("files", track.file, track.file.name));
-      form.append("metadata", JSON.stringify(selectedTracks.map((track) => ({
-        fileName: track.file.name,
-        title: track.title,
-        slug: track.slug,
-        category: track.category,
-        emotionTags: track.emotionTags,
-        situationTags: track.situationTags,
-        timeTags: track.timeTags,
-        energyScore: track.energyScore,
-        prompt: track.prompt,
-        status: track.status,
-      }))));
+      for (const [index, track] of selectedTracks.entries()) {
+        setUploadProgress({ current: index, total: selectedTracks.length });
+        setMessage(`${index + 1} / ${selectedTracks.length} 파일을 R2에 업로드하고 D1에 저장하는 중입니다: ${track.file.name}`);
 
-      const response = await fetch("/api/admin/music/bulk", {
-        method: "POST",
-        body: form,
-      });
-      const payload = (await response.json()) as { count?: number; errors?: Array<{ fileName: string; error: string }>; error?: string };
+        const form = new FormData();
+        form.append("files", track.file, track.file.name);
+        form.append("metadata", JSON.stringify([{
+          fileName: track.file.name,
+          title: track.title,
+          slug: track.slug,
+          category: track.category,
+          emotionTags: track.emotionTags,
+          situationTags: track.situationTags,
+          timeTags: track.timeTags,
+          energyScore: track.energyScore,
+          prompt: track.prompt,
+          status: track.status,
+        }]));
 
-      if (!response.ok && payload.error) {
-        setMessage(payload.error);
-        return;
+        try {
+          const response = await fetch("/api/admin/music/bulk", {
+            method: "POST",
+            body: form,
+          });
+          const payload = await response.json().catch(() => null) as {
+            count?: number;
+            errors?: Array<{ fileName: string; error: string }>;
+            error?: string;
+          } | null;
+
+          if (!response.ok) {
+            errors.push({ fileName: track.file.name, error: payload?.error || `업로드 실패 (${response.status})` });
+            continue;
+          }
+
+          if (payload?.errors?.length) {
+            errors.push(...payload.errors);
+          }
+
+          const count = payload?.count || 0;
+          savedCount += count;
+          if (count > 0) {
+            uploadedTrackIds.push(track.id);
+          }
+        } catch (error) {
+          errors.push({ fileName: track.file.name, error: error instanceof Error ? error.message : "업로드에 실패했습니다." });
+        }
       }
 
-      setUploadResult({ count: payload.count || 0, errors: payload.errors || [] });
-      setMessage(`${payload.count || 0}개 곡이 저장되었습니다.`);
-      if ((payload.count || 0) > 0) {
-        setTracks((current) => current.filter((track) => !selectedTracks.some((selected) => selected.id === track.id)));
+      setUploadProgress({ current: selectedTracks.length, total: selectedTracks.length });
+      setUploadResult({ count: savedCount, errors });
+      setMessage(errors.length > 0 ? `${savedCount}개 저장, ${errors.length}개 실패했습니다.` : `${savedCount}개 곡이 저장되었습니다.`);
+      if (uploadedTrackIds.length > 0) {
+        setTracks((current) => current.filter((track) => !uploadedTrackIds.includes(track.id)));
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "업로드에 실패했습니다.");
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -198,6 +229,14 @@ export default function MusicBulkUploadClient() {
           </label>
         </div>
         {message && <p className="mt-4 text-sm font-bold text-pink-300">{message}</p>}
+        {uploadProgress && (
+          <div className="mt-4 overflow-hidden rounded-full bg-black/30">
+            <div
+              className="h-2 rounded-full bg-violet-400 transition-all"
+              style={{ width: `${Math.round((uploadProgress.current / uploadProgress.total) * 100)}%` }}
+            />
+          </div>
+        )}
       </section>
 
       {tracks.length > 0 && (
